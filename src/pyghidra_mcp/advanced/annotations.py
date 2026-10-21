@@ -28,6 +28,13 @@ def _text(value, name="text"):
     return value
 
 
+def _name(value, name="name"):
+    text = _text(value, name)
+    if not text.strip():
+        raise ValueError(f"{name} must not be empty or blank")
+    return text
+
+
 def _integer(value):
     return int(value, 0) if isinstance(value, str) else int(value)
 
@@ -278,8 +285,7 @@ def _tag(item, manager):
 )
 def tag_add(call: Call, function_start, name, comment=""):
     manager = call.program.getFunctionManager().getFunctionTagManager()
-    item = manager.createFunctionTag(_text(name, "name"), _text(comment, "comment"))
-    item.setComment(comment)
+    item = manager.createFunctionTag(_name(name, "name"), _text(comment, "comment"))
     fn = function(call, function_start)
     fn.addTag(name)
     return {"function": str(fn.getEntryPoint()), **_tag(item, manager)}

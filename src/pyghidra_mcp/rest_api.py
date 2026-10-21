@@ -25,14 +25,42 @@ Dispatch = Callable[[Any, str, dict[str, Any], Any], Awaitable[types.CallToolRes
 _DEV_OWNER = "rest-local"
 
 
+# Message vocabulary mirrors the reference project's error-class mapping: worker
+# tool failures cross the MCP boundary as text only, so curated phrases carry
+# the class. Specific phrases must be tested before the generic "not found".
+_MESSAGE_CLASS = (
+    (403, ("trusted execution is disabled", "read-only", "permission", "denied")),
+    (409, ("locked by another worker", "in use", "already open", "already exists")),
+    (503, ("analysis is incomplete", "busy", "active tasks", "pending transaction")),
+    (504, ("timeout", "timed out", "deadline")),
+    (
+        400,
+        (
+            "must be",
+            "must not",
+            "invalid",
+            "required",
+            "unexpected",
+            "ambiguous",
+            "between",
+            "specify",
+            "cannot be empty",
+            "at least",
+            "at most",
+            "not a boolean",
+            "address or unique symbol not found",
+            "no load spec found",
+        ),
+    ),
+    (404, ("unknown tool", "not found", "no such file", "no function", "no instruction")),
+)
+
+
 def _classify(message: str) -> int:
     lowered = message.lower()
-    if "unknown tool" in lowered or "not found" in lowered or "no such file" in lowered:
-        return 404
-    if "permission" in lowered or "denied" in lowered or "read-only" in lowered:
-        return 403
-    if "timeout" in lowered or "timed out" in lowered:
-        return 504
+    for status, phrases in _MESSAGE_CLASS:
+        if any(phrase in lowered for phrase in phrases):
+            return status
     return 500
 
 
@@ -102,8 +130,28 @@ class RestApi:
         self.management_tools = management_tools
         self.api_key = api_key
         self.started_at = time.monotonic()
+        self._properties: dict[str, frozenset[str]] = {}
 
     # -- identity -----------------------------------------------------------
+
+    def _argument_properties(self, name: str) -> frozenset[str]:
+        """Argument names a tool accepts; empty set means unknown (merge nothing)."""
+        cached = self._properties.get(name)
+        if cached is not None:
+            return cached
+        schema = next(
+            (
+                tool.inputSchema
+                for tool in (*self.runtime.tools, *self.management_tools)
+                if tool.name == name
+            ),
+            None,
+        )
+        if schema is None:
+            return frozenset()
+        properties = frozenset(schema.get("properties", {}))
+        self._properties[name] = properties
+        return properties
 
     def _authenticate(self, request: Request) -> tuple[Any, JSONResponse | None]:
         if self.api_key is None:
@@ -225,6 +273,30 @@ class RestApi:
             )
         return await self._call(name, arguments, owner)
 
+    def _pipeline_arguments(self, call: dict, merged: dict[str, Any], pipeline: bool):
+        """Prepare one batch call's arguments: explicit args, then per-call
+        result renames, then schema-filtered pipeline merge. Raises ValueError
+        on a malformed call or map."""
+        if not isinstance(call, dict) or not isinstance(call.get("tool"), str):
+            raise ValueError("each call needs tool and arguments")
+        raw_arguments = dict(call.get("arguments", {}))
+        mapping = call.get("map") or {}
+        if not isinstance(mapping, dict):
+            raise ValueError("map must map destination names to result keys")
+        for destination, source in mapping.items():
+            if source in merged:
+                raw_arguments[destination] = merged[source]
+        if pipeline:
+            # Heterogeneous tools reject unknown keys and use different
+            # argument names: only schema-known keys flow forward, plus the
+            # explicit renames above.
+            allowed = self._argument_properties(call["tool"])
+            for key, value in merged.items():
+                if key in allowed and key not in raw_arguments:
+                    raw_arguments[key] = value
+        return call["tool"], raw_arguments
+
+
     async def batch(self, request: Request) -> JSONResponse:
         owner, failure = self._authenticate(request)
         if failure is not None:
@@ -246,18 +318,15 @@ class RestApi:
         merged: dict[str, Any] = {}
         results = []
         for call in body["calls"]:
-            if not isinstance(call, dict) or not isinstance(call.get("tool"), str):
+            try:
+                tool, arguments = self._pipeline_arguments(call, merged, pipeline)
+            except ValueError as exc:
                 return JSONResponse(
-                    {
-                        "status": "error",
-                        "error": {"code": 400, "message": "each call needs tool and arguments"},
-                    },
+                    {"status": "error", "error": {"code": 400, "message": str(exc)}},
                     status_code=400,
                 )
-            raw_arguments = call.get("arguments", {})
-            arguments = dict(merged, **raw_arguments) if pipeline else dict(raw_arguments)
             started = time.monotonic()
-            result = await self.dispatch(self.runtime, call["tool"], arguments, owner)
+            result = await self.dispatch(self.runtime, tool, arguments, owner)
             payload = _payload(result)
             envelope: dict[str, Any] = {
                 "tool": call["tool"],
