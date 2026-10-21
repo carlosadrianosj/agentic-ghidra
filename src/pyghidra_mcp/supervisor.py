@@ -28,6 +28,7 @@ from starlette.applications import Starlette
 from starlette.routing import Route
 
 from pyghidra_mcp import __version__
+from pyghidra_mcp.rest_api import create_api_routes
 from pyghidra_mcp.supervisor_runtime import (
     SupervisorConfig,
     SupervisorRuntime,
@@ -62,10 +63,11 @@ def _result(value: dict[str, Any]) -> types.CallToolResult:
         structuredContent=value,
     )
 
-
-def _error(message: str) -> types.CallToolResult:
+def _error(message: str, kind: str | None = None) -> types.CallToolResult:
     return types.CallToolResult(
-        content=[types.TextContent(type="text", text=message)], isError=True
+        content=[types.TextContent(type="text", text=message)],
+        structuredContent={"error": message, "kind": kind} if kind else None,
+        isError=True,
     )
 
 
@@ -258,7 +260,7 @@ async def _dispatch(
         # Ownership comes only from MCP transport session identity, never caller metadata.
         return await runtime.call(name, arguments, owner=owner)
     except Exception as exc:
-        return _error(str(exc))
+        return _error(str(exc), type(exc).__name__)
 
 
 async def _dispatch_investigation(
@@ -315,7 +317,10 @@ class _HTTPApp:
         await self.manager.handle_request(scope, receive, send)
 
 
-def create_http_app(server: Server, host: str, port: int) -> Starlette:
+def create_http_app(
+    server: Server, host: str, port: int, runtime: SupervisorRuntime | None = None,
+    rest_api_key: str | None = None,
+) -> Starlette:
     advertised_host = f"[{host}]" if ":" in host and not host.startswith("[") else host
     allowed = {
         f"{advertised_host}:{port}",
@@ -337,10 +342,14 @@ def create_http_app(server: Server, host: str, port: int) -> Starlette:
         async with manager.run():
             yield
 
-    return Starlette(
-        routes=[Route("/mcp", _HTTPApp(manager), methods=["GET", "POST", "DELETE"])],
-        lifespan=lifespan,
-    )
+    routes = [Route("/mcp", _HTTPApp(manager), methods=["GET", "POST", "DELETE"])]
+    if runtime is not None:
+        routes.extend(
+            create_api_routes(
+                runtime, _dispatch, _management_tools(), api_key=rest_api_key
+            )
+        )
+    return Starlette(routes=routes, lifespan=lifespan)
 
 
 class _StdinLines:
@@ -406,7 +415,9 @@ async def _close_after_cancellation(runtime: SupervisorRuntime) -> None:
             logger.warning("Shutdown is still saving worker projects; waiting for owned processes")
 
 
-async def run_supervisor(config: SupervisorConfig, host: str, port: int, transport: str) -> None:
+async def run_supervisor(
+    config: SupervisorConfig, host: str, port: int, transport: str, rest_api_key: str | None = None
+) -> None:
     if os.environ.get("GHIDRA_ADVANCED_TRUSTED_CODE", "").lower() in {"1", "true", "yes"}:
         try:
             loopback = ipaddress.ip_address(host).is_loopback
@@ -432,13 +443,14 @@ async def run_supervisor(config: SupervisorConfig, host: str, port: int, transpo
             async with _stdio_streams() as (read_stream, write_stream):
                 await server.run(read_stream, write_stream, server.create_initialization_options())
         else:
-            app = create_http_app(server, host, port)
+            app = create_http_app(server, host, port, runtime=runtime, rest_api_key=rest_api_key)
             http_server = uvicorn.Server(
                 uvicorn.Config(
                     app, host=host, port=port, log_level="info", timeout_graceful_shutdown=10
                 )
             )
             logger.info("Supervisor MCP endpoint: http://%s:%s/mcp", host, port)
+            logger.info("Supervisor REST API: http://%s:%s/api/v1/tools", host, port)
             await http_server.serve(sockets=[listener])
     finally:
         await _close_after_cancellation(runtime)
@@ -464,7 +476,19 @@ async def run_supervisor(config: SupervisorConfig, host: str, port: int, transpo
     default="streamable-http",
     show_default=True,
 )
-def main(config_path: Path, host: str, port: int, transport: str) -> None:
+@click.option(
+    "--rest-api-key",
+    "rest_api_key",
+    default=None,
+    envvar="GHIDRA_ADVANCED_REST_API_KEY",
+    help=(
+        "SHA-256 hex digest required as Bearer token or X-API-Key on /api/v1 routes. "
+        "Unset means trusted dev mode with a shared local owner."
+    ),
+)
+def main(
+    config_path: Path, host: str, port: int, transport: str, rest_api_key: str | None
+) -> None:
     """Serve existing Ghidra tools through explicitly selected isolated workers.
 
     Config paths are relative to the JSON file. Each worker requires worker_id,
@@ -486,7 +510,7 @@ def main(config_path: Path, host: str, port: int, transport: str) -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     try:
         config = load_config(config_path, supervisor_port=port)
-        asyncio.run(run_supervisor(config, host, port, transport))
+        asyncio.run(run_supervisor(config, host, port, transport, rest_api_key))
     except (KeyboardInterrupt, asyncio.CancelledError):
         logger.info("Supervisor stopped; owned workers have been shut down")
     except (OSError, ValueError, RuntimeError) as exc:
