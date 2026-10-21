@@ -1,0 +1,14 @@
+{
+    // reference https://github.com/astral-sh/ruff-vscode/issues/247
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+        }
+    },
+    "ruff.configuration": "pyproject.toml",
+    "ruff.organizeImports": true,
+    "ruff.fixAll": true,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "charliermarsh.ruff"
+}

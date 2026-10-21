@@ -1,1 +1,0 @@
-# Ghidra-advanced-MCP

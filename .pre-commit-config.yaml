@@ -1,0 +1,52 @@
+# Pre-commit configuration for fast local checks.
+# Keep these hooks lightweight; the broader matrix runs in GitHub Actions.
+repos:
+  # Ruff - matches .github/workflows/lint.yml ruff job
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Pyright type checking - matches .github/workflows/lint.yml pyright job
+  - repo: local
+    hooks:
+      - id: pyright
+        name: pyright
+        entry: uv
+        language: system
+        types: [python]
+        files: ^src/
+        pass_filenames: false
+        args: [run, --python, "3.13", pyright, src/]
+
+  # Unit tests are part of both local hooks and CI.
+  - repo: local
+    hooks:
+      - id: pytest-unit
+        name: pytest unit tests
+        entry: uv
+        language: system
+        types: [python]
+        pass_filenames: false
+        args: [run, --python, "3.13", pytest, tests/unit/, --doctest-modules]
+
+  # Keep pre-commit integration coverage to one lightweight smoke test.
+  # Full integration coverage, including GUI paths, runs in GitHub Actions.
+  - repo: local
+    hooks:
+      - id: pytest-integration
+        name: pytest integration smoke test
+        entry: uv
+        language: system
+        types: [python]
+        pass_filenames: false
+        args: [
+          run,
+          --python,
+          "3.13",
+          pytest,
+          tests/integration/test_concurrent_streamable_client.py,
+          --doctest-modules,
+        ]

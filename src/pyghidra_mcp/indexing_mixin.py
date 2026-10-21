@@ -1,0 +1,267 @@
+import concurrent.futures
+import logging
+import re
+import threading
+import time
+from pathlib import Path
+from typing import Any
+
+import chromadb
+from chromadb.config import Settings
+
+from pyghidra_mcp.tools import DEFAULT_DECOMPILE_TIMEOUT_SECONDS, GhidraTools
+
+logger = logging.getLogger(__name__)
+
+# Collection metadata key flipped to True only after a code index is fully
+# populated. A collection missing this marker (legacy) or carrying False (an
+# interrupted/partial index) is rebuilt rather than trusted on restart.
+COLLECTION_COMPLETE_KEY = "pyghidra_index_complete"
+
+
+class IndexingMixin:
+    """Shared MCP-side indexing behavior for headless and GUI contexts."""
+
+    programs: dict[str, Any]
+
+    def _init_indexing_state(self, pyghidra_mcp_dir: Path, *, threaded: bool) -> None:
+        chromadb_path = pyghidra_mcp_dir / "chromadb"
+        chromadb_path.mkdir(parents=True, exist_ok=True)
+        self.chroma_client = chromadb.PersistentClient(
+            path=str(chromadb_path), settings=Settings(anonymized_telemetry=False)
+        )
+        self.index_executor = (
+            concurrent.futures.ThreadPoolExecutor(max_workers=1) if threaded else None
+        )
+        self._index_futures: dict[str, concurrent.futures.Future] = {}
+        self._index_lock = threading.Lock()
+
+    def shutdown_executor(
+        self,
+        label: str,
+        executor: concurrent.futures.ThreadPoolExecutor | None,
+    ) -> None:
+        """Drop queued work, then wait -- without a deadline -- for in-flight work.
+
+        ``cancel_futures`` is what makes Ctrl+C responsive: tasks that have not
+        started are dropped instead of run. The wait is deliberately unbounded,
+        because a task already inside Ghidra cannot be interrupted from Python
+        and abandoning it mid-write risks a corrupt program database.
+        """
+        if executor is None:
+            return
+
+        logger.info("Stopping %s tasks (queued work cancelled, in-flight work awaited)...", label)
+        start = time.monotonic()
+        executor.shutdown(wait=True, cancel_futures=True)
+        logger.info("%s tasks stopped after %.1fs.", label.capitalize(), time.monotonic() - start)
+
+    def shutdown_indexing(self) -> None:
+        self.shutdown_executor("indexing", self.index_executor)
+
+    def _lookup_program_info(self, binary_name: str) -> Any | None:
+        raise NotImplementedError
+
+    def schedule_indexing(
+        self,
+        binary_name: str,
+        *,
+        code: bool = True,
+        strings: bool = True,
+    ) -> bool:
+        """Schedule MCP-side indexing for a binary when it is relevant."""
+        program_info = self._lookup_program_info(binary_name)
+        if program_info is None or not program_info.analysis_complete:
+            return False
+        if (not code or program_info.code_collection is not None) and (
+            not strings or program_info.strings is not None
+        ):
+            return False
+
+        with self._index_lock:
+            future = self._index_futures.get(binary_name)
+            if future is not None and not future.done():
+                return False
+
+            if self.index_executor is not None:
+                future = self.index_executor.submit(
+                    self._index_program,
+                    program_info,
+                    code=code,
+                    strings=strings,
+                )
+                self._index_futures[binary_name] = future
+                future.add_done_callback(
+                    lambda done_future, name=binary_name: self._index_done_callback(
+                        name, done_future
+                    )
+                )
+                return True
+
+        self._index_program(program_info, code=code, strings=strings)
+        return True
+
+    def schedule_startup_indexing(self, *, max_binaries: int | None = 10) -> None:
+        """Eagerly index only manageable existing projects on startup."""
+        analyzed_programs = [
+            program_info
+            for program_info in self.programs.values()
+            if program_info.analysis_complete
+        ]
+        if max_binaries is not None and len(analyzed_programs) > max_binaries:
+            logger.info(
+                "Skipping startup indexing for %s binaries; indexing will start lazily.",
+                len(analyzed_programs),
+            )
+            return
+
+        for program_info in analyzed_programs:
+            self.schedule_indexing(program_info.name)
+
+    def _normalize_collection_name(self, name: str) -> str:
+        """Return a name that satisfies Chroma's collection-name validation.
+
+        Chroma only accepts ASCII letters, numbers, dots, dashes, and
+        underscores, starting and ending with an alphanumeric. Names arrive here
+        already carrying the "-<6 hex>" hash suffix appended by
+        _gen_unique_bin_name, which guarantees they are long enough and end
+        alphanumerically, so no length padding or fallback is needed.
+        """
+        # No consecutive dots (Chroma rejects "..").
+        name = re.sub(r"\.{2,}", ".", name)
+
+        # Replace everything Chroma rejects, including whitespace and Unicode
+        # word characters (the previous regex kept both and Chroma refused the
+        # resulting collection name).
+        name = re.sub(r"[^a-zA-Z0-9._-]", "_", name)
+
+        # Chroma requires a leading and trailing alphanumeric (e.g. dotfiles
+        # start with ".").
+        return name.strip("._-")
+
+    def _open_complete_collection(self, name: str) -> Any | None:
+        """Return an existing, fully-indexed collection, or None.
+
+        Completion is decided by the ``COLLECTION_COMPLETE_KEY`` marker, not by
+        mere existence: chromadb persists a collection the moment it is created,
+        so an index interrupted partway through leaves an empty/partial
+        collection on disk. Such a collection (and any legacy one lacking the
+        marker) is deleted here so the caller rebuilds it from scratch.
+        """
+        name = self._normalize_collection_name(name)
+        try:
+            collection = self.chroma_client.get_collection(name=name)
+        except Exception:
+            return None
+
+        metadata = collection.metadata or {}
+        if metadata.get(COLLECTION_COMPLETE_KEY):
+            return collection
+
+        logger.warning(
+            "Collection '%s' is incomplete (interrupted index?); deleting to rebuild.", name
+        )
+        self.chroma_client.delete_collection(name=name)
+        return None
+
+    def _mark_collection_complete(self, collection: Any, function_count: int) -> None:
+        """Flip a fully-populated collection's completion marker on disk."""
+        collection.modify(
+            metadata={COLLECTION_COMPLETE_KEY: True, "function_count": function_count}
+        )
+
+    def _init_chroma_code_collection_for_program(self, program_info: Any) -> None:
+        from ghidra.program.model.listing import Function
+
+        logger.info("Initializing Chroma code collection for %s", program_info.name)
+        existing = self._open_complete_collection(
+            self._normalize_collection_name(program_info.name)
+        )
+        if existing is not None:
+            logger.info(
+                "Collection '%s' already complete; skipping code ingest.", program_info.name
+            )
+            program_info.code_collection = existing
+            return
+
+        logger.info("Creating new code collection '%s'", program_info.name)
+        tools = GhidraTools(program_info)
+        functions = tools.get_all_functions()
+        decompiles = []
+        ids = []
+        metadatas = []
+
+        for i, func in enumerate(functions):
+            func: Function
+            try:
+                if i % 10 == 0:
+                    logger.debug("Decompiling %s/%s", i, len(functions))
+                decompiled = tools.decompile_function(
+                    func, timeout=DEFAULT_DECOMPILE_TIMEOUT_SECONDS
+                )
+                decompiles.append(decompiled.code)
+                ids.append(decompiled.name)
+                metadatas.append(
+                    {
+                        "function_name": decompiled.name,
+                        "entry_point": str(func.getEntryPoint()),
+                    }
+                )
+            except Exception as e:
+                logger.error("Failed to decompile %s: %s", func.getSymbol().getName(True), e)
+
+        # Created with the completion marker off; an interruption before the
+        # marker is flipped below leaves a collection that reads as incomplete
+        # and is rebuilt on the next run. The add failure is intentionally not
+        # swallowed: a partial index must fail loudly so it is not marked done.
+        collection = self.chroma_client.create_collection(
+            name=self._normalize_collection_name(program_info.name),
+            metadata={COLLECTION_COMPLETE_KEY: False},
+        )
+        batch_size = 5000
+        for i in range(0, len(decompiles), batch_size):
+            end = min(i + batch_size, len(decompiles))
+            collection.add(
+                documents=decompiles[i:end],
+                metadatas=metadatas[i:end],
+                ids=ids[i:end],
+            )
+
+        self._mark_collection_complete(collection, len(ids))
+        logger.info("Code analysis complete for collection '%s'", program_info.name)
+        program_info.code_collection = collection
+
+    def _init_strings_for_program(self, program_info: Any) -> None:
+        logger.info("Loading strings for %s", program_info.name)
+        program_info.strings = GhidraTools(program_info).get_all_strings()
+        logger.info("Loaded %s strings for %s", len(program_info.strings), program_info.name)
+
+    def _index_program(
+        self,
+        program_info: Any,
+        *,
+        code: bool = True,
+        strings: bool = True,
+    ) -> None:
+        if code and program_info.code_collection is None:
+            self._init_chroma_code_collection_for_program(program_info)
+        if strings and program_info.strings is None:
+            self._init_strings_for_program(program_info)
+
+    def _index_done_callback(
+        self,
+        binary_name: str,
+        future: concurrent.futures.Future,
+    ) -> None:
+        with self._index_lock:
+            self._index_futures.pop(binary_name, None)
+        # CancelledError derives from BaseException, so shutdown-cancelled work
+        # must be checked for explicitly or it escapes as a spurious callback error.
+        if future.cancelled():
+            logger.info("Background indexing for %s cancelled during shutdown.", binary_name)
+            return
+        try:
+            future.result()
+            logger.info("Background indexing completed successfully for %s.", binary_name)
+        except Exception:
+            logger.error("Background indexing failed for %s.", binary_name, exc_info=True)
