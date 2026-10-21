@@ -32,10 +32,10 @@ COPY --from=uv --chown=vscode:vscode /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
 
-EXPOSE 8000
+EXPOSE 29841
 
 # expose the server to the outside world otherwise it will only be accessible from inside the container
-ENV MCP_HOST=0.0.0.0
+ENV GHIDRA_ADVANCED_MCP_HOST=0.0.0.0
 
 ENV GHIDRA_INSTALL_DIR="/ghidra"
 

@@ -131,11 +131,20 @@ class PyGhidraContext(IndexingMixin):
         if not self.threaded:
             logger.warn("--no-threaded flag forcing max_workers to 1")
             self.max_workers = 1
+        self._work_lock = threading.RLock()
+        self._close_lock = threading.RLock()
+        self._closing = False
+        self._analysis_future: concurrent.futures.Future | None = None
+        self._analysis_futures: set[concurrent.futures.Future] = set()
         self._init_indexing_state(self.pyghidra_mcp_dir, threaded=self.threaded)
         self.executor = (
             concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers)
             if self.threaded
             else None
+        )
+        # Coordinators wait for analysis jobs, so they must not occupy a worker.
+        self.analysis_coordinator = (
+            concurrent.futures.ThreadPoolExecutor(max_workers=1) if self.threaded else None
         )
         self.import_executor = (
             concurrent.futures.ThreadPoolExecutor(max_workers=1) if self.threaded else None
@@ -146,15 +155,25 @@ class PyGhidraContext(IndexingMixin):
         self._init_project_programs()
 
     def close(self, save: bool = True):
-        """
-        Saves changes to all open programs and closes the project.
-        """
+        """Stop background work, then save and close the project once."""
+        with self._close_lock:
+            with self._work_lock:
+                if self._closing:
+                    return
+                self._closing = True
+                for future in self._analysis_futures:
+                    future.cancel()
+            self._close_project(save)
+
+    def _close_project(self, save: bool):
+        """Drain submitters before shutting down their consumers."""
         started = time.monotonic()
         logger.info("Closing project %s (save=%s)...", self.project_name, save)
 
+        self.shutdown_executor("import", self.import_executor)
+        self.shutdown_executor("analysis coordinator", self.analysis_coordinator)
         self.shutdown_executor("analysis", self.executor)
         self.shutdown_indexing()
-        self.shutdown_executor("import", self.import_executor)
 
         program_count = len(self.programs)
         logger.info(
@@ -493,15 +512,18 @@ class PyGhidraContext(IndexingMixin):
 
         import_plan = build_import_plan([binary_path])
 
-        if self.import_executor and import_plan.candidates:
-            future = self.import_executor.submit(
-                self._import_candidates,
-                import_plan.candidates,
-                analyze=True,
-            )
-            future.add_done_callback(self._import_callback)
-        elif import_plan.candidates:
-            self._import_candidates(import_plan.candidates, analyze=True)
+        with self._work_lock:
+            if self._closing:
+                raise RuntimeError("Project context is closing.")
+            if self.import_executor and import_plan.candidates:
+                future = self.import_executor.submit(
+                    self._import_candidates,
+                    import_plan.candidates,
+                    analyze=True,
+                )
+                future.add_done_callback(self._import_callback)
+            elif import_plan.candidates:
+                self._import_candidates(import_plan.candidates, analyze=True)
 
         queued_paths = [str(candidate.path) for candidate in import_plan.candidates]
         skipped = [
@@ -521,6 +543,19 @@ class PyGhidraContext(IndexingMixin):
             skipped=skipped,
             message=message,
         )
+
+    def schedule_indexing(
+        self,
+        binary_name: str,
+        *,
+        code: bool = True,
+        strings: bool = True,
+    ) -> bool:
+        """Do not let imports or analysis callbacks enqueue work during close."""
+        with self._work_lock:
+            if self._closing:
+                return False
+            return super().schedule_indexing(binary_name, code=code, strings=strings)
 
     def get_program_info(self, binary_name: str) -> "ProgramInfo":
         """Get program info or raise ValueError if not found."""
@@ -612,12 +647,14 @@ class PyGhidraContext(IndexingMixin):
             return
         try:
             future.result()
-            logging.info("Asynchronous analysis finished successfully.")
-            if not self.wait_for_analysis:
-                self.schedule_startup_indexing(max_binaries=max(len(self.programs), 1))
-        except Exception as e:
-            logging.error(f"Asynchronous analysis failed with exception: {e}")
-            raise e
+            with self._work_lock:
+                if self._closing:
+                    return
+                logging.info("Asynchronous analysis finished successfully.")
+                if not self.wait_for_analysis:
+                    self.schedule_startup_indexing(max_binaries=max(len(self.programs), 1))
+        except Exception:
+            logging.error("Asynchronous analysis failed.", exc_info=True)
 
     def analyze_project(
         self,
@@ -625,30 +662,31 @@ class PyGhidraContext(IndexingMixin):
         force_analysis: bool = False,
         verbose_analysis: bool = False,
     ) -> concurrent.futures.Future | None:
-        if self.executor:
-            future = self.executor.submit(
-                self._analyze_project,
-                require_symbols,
-                force_analysis,
-                verbose_analysis,
-            )
-
-            future.add_done_callback(self._analysis_done_callback)
-
-            if self.wait_for_analysis:
-                logger.info("Waiting for analysis to complete...")
-                try:
-                    future.result()
-                    logger.info("Analysis complete.")
-                except Exception as e:
-                    logger.error(f"Analysis completed with an exception: {e}")
+        with self._work_lock:
+            if self._closing:
+                raise RuntimeError("Project context is closing.")
+            if self.analysis_coordinator is None:
+                self._analyze_project(require_symbols, force_analysis, verbose_analysis)
+                self.schedule_startup_indexing(max_binaries=max(len(self.programs), 1))
                 return None
-            return future
-        else:
-            # No executor: just run synchronously
-            self._analyze_project(require_symbols, force_analysis, verbose_analysis)
-            self.schedule_startup_indexing(max_binaries=max(len(self.programs), 1))
+
+            future = self._analysis_future
+            if future is None or future.done():
+                future = self.analysis_coordinator.submit(
+                    self._analyze_project,
+                    require_symbols,
+                    force_analysis,
+                    verbose_analysis,
+                )
+                self._analysis_future = future
+                future.add_done_callback(self._analysis_done_callback)
+
+        if self.wait_for_analysis:
+            logger.info("Waiting for analysis to complete...")
+            future.result()
+            logger.info("Analysis complete.")
             return None
+        return future
 
     def _analyze_project(
         self,
@@ -667,31 +705,44 @@ class PyGhidraContext(IndexingMixin):
         completed_count = 0
 
         if self.executor:
-            futures = {
-                self.executor.submit(
-                    self.analyze_program,
-                    domainFile,
-                    require_symbols,
-                    force_analysis,
-                    verbose_analysis,
-                )
-                for domainFile in domain_files
-            }
-
-            for future in concurrent.futures.as_completed(futures):
-                if future.cancelled():
-                    # close() cancels queued analysis on shutdown; stop quietly
-                    # rather than surfacing CancelledError as an analysis failure.
-                    logger.info(
-                        "Analysis cancelled during shutdown after %s/%s programs.",
-                        completed_count,
-                        prog_count,
-                    )
+            with self._work_lock:
+                if self._closing:
                     return
-                result = future.result()
-                logger.info(f"Analysis complete for {result.getName()}")
-                completed_count += 1
-                logger.info(f"Completed {completed_count}/{prog_count} programs")
+                futures = [
+                    self.executor.submit(
+                        self.analyze_program,
+                        domain_file,
+                        require_symbols,
+                        force_analysis,
+                        verbose_analysis,
+                    )
+                    for domain_file in domain_files
+                ]
+                self._analysis_futures.update(futures)
+
+            try:
+                # result() also observes a cancelled queued future before a worker
+                # dequeues it; as_completed() can otherwise block during shutdown.
+                for future in futures:
+                    try:
+                        result = future.result()
+                    except concurrent.futures.CancelledError:
+                        if not self._closing:
+                            raise
+                        logger.info(
+                            "Analysis cancelled during shutdown after %s/%s programs.",
+                            completed_count,
+                            prog_count,
+                        )
+                        return
+                    logger.info(f"Analysis complete for {result.getName()}")
+                    completed_count += 1
+                    logger.info(f"Completed {completed_count}/{prog_count} programs")
+            finally:
+                with self._work_lock:
+                    for future in futures:
+                        future.cancel()
+                    self._analysis_futures.difference_update(futures)
         else:
             for domain_file in domain_files:
                 self.analyze_program(domain_file, require_symbols, force_analysis, verbose_analysis)

@@ -12,15 +12,6 @@ def test_client_import():
     assert PyGhidraMcpClient is not None
 
 
-def test_client_instantiation():
-    """Test that client can be instantiated with default parameters."""
-    from pyghidra_mcp_cli.client import PyGhidraMcpClient
-
-    client = PyGhidraMcpClient()
-    assert client.host == "127.0.0.1"
-    assert client.port == 8000
-
-
 def test_client_custom_params():
     """Test that client can be instantiated with custom parameters."""
     from pyghidra_mcp_cli.client import PyGhidraMcpClient

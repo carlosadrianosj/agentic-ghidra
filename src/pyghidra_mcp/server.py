@@ -120,7 +120,9 @@ async def server_lifespan(server: Server) -> AsyncIterator[MCPContext]:
 # MCP 1.x leaves Settings.lifespan as an unresolved forward reference until rebuilt.
 # Rebuild before FastMCP constructs Settings so pydantic-settings 2.15+ can inspect it.
 FastMCPSettings.model_rebuild()
-mcp = FastMCP("pyghidra-mcp", lifespan=server_lifespan)  # type: ignore
+_worker_token = os.environ.get("PYGHIDRA_MCP_WORKER_TOKEN")
+_server_name = f"pyghidra-mcp:{_worker_token}" if _worker_token else "ghidra-advanced-mcp"
+mcp = FastMCP(_server_name, lifespan=server_lifespan)  # type: ignore
 mcp._mcp_server.version = __version__
 
 
@@ -434,9 +436,9 @@ def run_headless_server(mcp: FastMCP, transport: str) -> None:
 @optgroup.option(
     "-p",
     "--port",
-    type=int,
-    default=8000,
-    envvar="MCP_PORT",
+    type=click.IntRange(1, 65535),
+    default=29841,
+    envvar="GHIDRA_ADVANCED_MCP_PORT",
     show_default=True,
     help="Port to listen on for HTTP-based transports.",
 )
@@ -445,14 +447,14 @@ def run_headless_server(mcp: FastMCP, transport: str) -> None:
     "--host",
     type=str,
     default="127.0.0.1",
-    envvar="MCP_HOST",
+    envvar="GHIDRA_ADVANCED_MCP_HOST",
     show_default=True,
     help="Host to listen on for HTTP-based transports.",
 )
 @optgroup.option(
     "--project-path",
     type=click.Path(path_type=Path),
-    default=Path("pyghidra_mcp_projects"),
+    default=Path("ghidra_advanced_mcp_projects"),
     show_default=True,
     help="Directory path to create new pyghidra-mcp project or an existing Ghidra .gpr file.",
 )
@@ -581,7 +583,7 @@ def main(
     - input_paths: Path to one or more binaries to import, analyze, and expose with pyghidra-mcp\n
     - transport: Supports stdio, streamable-http, and sse transports.\n
     For stdio, it will read from stdin and write to stdout.
-    For streamable-http and sse, it will start an HTTP server on the specified port (default 8000).
+    For streamable-http and sse, it will start an HTTP server on the specified port (default 29841).
 
     """
     try:
