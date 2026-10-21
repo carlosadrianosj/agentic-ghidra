@@ -170,6 +170,52 @@ def test_batch_sequential_stop_on_error_and_pipeline():
     ).json()
     assert piped["status"] == "ok"
 
+def test_pipeline_filters_unknown_keys_and_applies_map():
+    client, runtime = _client()
+    body = client.post(
+        "/api/v1/batch",
+        json={
+            "calls": [
+                {"tool": "decomp.function", "arguments": {"session_id": "s1"}},
+                {"tool": "health.ping", "arguments": {}, "map": {"text": "code"}},
+            ],
+            "pipeline": True,
+        },
+    ).json()
+    assert body["status"] == "ok"
+    # health.ping accepts no properties, so only the explicit map binding lands.
+    assert runtime.calls[1][1] == {"text": "return 42;"}
+    with_map = client.post(
+        "/api/v1/batch",
+        json={
+            "calls": [
+                {"tool": "decomp.function", "arguments": {"session_id": "s1"}},
+                {
+                    "tool": "decomp.function",
+                    "arguments": {},
+                    "map": {"session_id": "code"},
+                },
+            ],
+            "pipeline": True,
+        },
+    ).json()
+    assert with_map["status"] == "ok"
+    assert runtime.calls[3][1]["session_id"] == "return 42;"
+
+def test_message_classification_vocabulary():
+    from pyghidra_mcp.rest_api import _classify
+
+    assert _classify("limit must be between 1 and 1000") == 400
+    assert _classify("Address or unique symbol not found: zzz") == 400
+    assert _classify("field 'functions' is unexpected") == 400
+    assert _classify("Trusted execution is disabled; enable it") == 403
+    assert _classify("Program session is read-only; use program.mode.set") == 403
+    assert _classify("project may already be locked by another worker") == 409
+    assert _classify("Program analysis is incomplete") == 503
+    assert _classify("request timed out after 30s") == 504
+    assert _classify("Unknown tool: nope") == 404
+    assert _classify("Function or symbol '001234' not found.") == 404
+    assert _classify("something exploded in the JVM") == 500
 
 def test_worker_and_investigation_routes():
     client, _ = _client()
