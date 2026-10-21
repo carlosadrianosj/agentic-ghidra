@@ -1,6 +1,6 @@
 # Ghidra-advanced-MCP
 
-Apache-2.0 fork of [pyghidra-mcp](https://github.com/clearbluejar/pyghidra-mcp) (v0.2.7) extended with a
+Fork of [pyghidra-mcp](https://github.com/clearbluejar/pyghidra-mcp) (v0.2.7) extended with a
 212-operation headless catalog, isolated local workers, and team investigations — validated against
 real Ghidra 12.1.4 on AArch64, ARM32, x86-64, and native Mach-O ARM64.
 
@@ -10,9 +10,8 @@ real Ghidra 12.1.4 on AArch64, ARM32, x86-64, and native Mach-O ARM64.
   `listing`, `memory`, `pcode`, `patch`, `symbol`, `reference`, `type`, `transaction`, …) plus the
   20 legacy headless tools. Source names are preserved as aliases; an alias is never counted as a
   new capability. The pinned equivalence matrix lives in
-  `src/pyghidra_mcp/advanced/reference_catalog.json` and is enforced by CI
-  (`.github/workflows/catalog.yml`): `tools/check_catalog.py` fails when
-  `source_names - implemented_or_mapped != ∅`.
+  `src/pyghidra_mcp/advanced/reference_catalog.json`; run `python tools/check_catalog.py`
+  locally to fail when `source_names - implemented_or_mapped != ∅`.
 - **Sessions and transactions**: every operation is session-bound with explicit read/write modes,
   per-program locks, undo/redo, revert, and decompiler/index cache invalidation after mutations.
 - **Local worker supervisor** (`ghidra-advanced-mcp` CLI): on-demand JVM workers with isolated
@@ -70,11 +69,3 @@ All runs: analysis overlap observed, `save`/reopen integrity true on every worke
 telemetry (`mcp_request`, `import`, `analyze`, `decompile`(+pool wait), `indexing`(+queue wait),
 `program_lock_wait`) and JVM memory counters are recorded in `measurements.json`. Cold imports
 degrade while workers boot concurrently (shared disk/CPU); warm imports stay ~0.5 s.
-
-## Licensing
-
-This fork remains Apache-2.0. The reference tool list from
-[`ghidra-headless-mcp`](https://github.com/mrphrazer/ghidra-headless-mcp) (GPL-2.0) is used as
-**names only**: `tools/reference_names.json` records the AST extraction of tool names and name
-mappings with no backend implementation imported. All handlers here are implemented against the
-public Ghidra API; no GPL source was copied.
