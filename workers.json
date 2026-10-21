@@ -1,0 +1,20 @@
+{
+  "workers": [
+    {
+      "worker_id": "analysis_a",
+      "port": 29842,
+      "project_path": "runtime/projects/analysis_a",
+      "project_name": "analysis_a",
+      "max_workers": 1,
+      "input_paths": []
+    },
+    {
+      "worker_id": "analysis_b",
+      "port": 29843,
+      "project_path": "runtime/projects/analysis_b",
+      "project_name": "analysis_b",
+      "max_workers": 1,
+      "input_paths": []
+    }
+  ]
+}

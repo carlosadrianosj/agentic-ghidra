@@ -217,3 +217,8 @@ notes-*.txt
 
 # macOS
 .DS_Store
+
+# Local Ghidra projects, worker logs, and runtime artifacts
+/.runtime/
+/runtime/
+/ghidra_advanced_mcp_projects/

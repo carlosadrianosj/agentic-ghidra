@@ -4,7 +4,7 @@ This module provides a simplified async client interface to the pyghidra-mcp ser
 via HTTP transport only.
 
 Usage:
-    client = PyGhidraMcpClient(host="localhost", port=8000)
+    client = PyGhidraMcpClient(host="localhost", port=29841)
     await client.connect()
     result = await client.list_project_binaries()
     await client.close()
@@ -45,14 +45,14 @@ class PyGhidraMcpClient:
     for common operations via HTTP transport.
 
     Usage:
-        async with PyGhidraMcpClient(host="localhost", port=8000) as client:
+        async with PyGhidraMcpClient(host="localhost", port=29841) as client:
             result = await client.list_project_binaries()
     """
 
     def __init__(
         self,
         host: str = "127.0.0.1",
-        port: int = 8000,
+        port: int = 29841,
     ):
         """
         Initialize the MCP client.

@@ -72,8 +72,9 @@ After starting the server, run this CLI again:
 )
 @click.option(
     "--port",
-    type=int,
-    default=8000,
+    type=click.IntRange(1, 65535),
+    default=29841,
+    envvar="GHIDRA_ADVANCED_MCP_PORT",
     show_default=True,
     help="Server port.",
 )

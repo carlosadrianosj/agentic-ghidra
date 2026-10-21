@@ -164,7 +164,7 @@ def handle_command_error(
 
                 client = PyGhidraMcpClient(
                     host=ctx.obj.get("HOST", "127.0.0.1"),
-                    port=ctx.obj.get("PORT", 8000),
+                    port=ctx.obj.get("PORT", 29841),
                 )
 
                 async def show_binaries():

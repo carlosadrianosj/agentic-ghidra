@@ -1,7 +1,9 @@
 # PyGhidra MCP Makefile
 # Development and deployment commands for the PyGhidra MCP server
 
-.PHONY: help install install-dev run test test-integration test-integration-fast test-integration-gui test-unit lint format typecheck clean pre-commit-install check dev build
+.PHONY: help install install-dev run run-direct test test-integration test-integration-fast test-integration-gui test-unit lint format typecheck clean pre-commit-install check dev build
+
+WORKER_CONFIG ?= workers.json
 
 # Default target
 help:
@@ -10,7 +12,8 @@ help:
 	@echo "Available commands:"
 	@echo "  install            Install project dependencies"
 	@echo "  install-dev        Install with development dependencies"
-	@echo "  run                Run the MCP server"
+	@echo "  run                Run the isolated-worker MCP supervisor"
+	@echo "  run-direct         Run a standalone MCP server"
 	@echo "  test               Run the full test suite (unit and integration)"
 	@echo "  test-unit          Run unit tests"
 	@echo "  test-integration   Run integration tests"
@@ -35,10 +38,12 @@ install-dev:
 	@echo "Installing PyGhidra MCP with development dependencies..."
 	uv sync --extra dev
 
-# Run the server
+# Run isolated Ghidra workers behind one MCP endpoint
 run:
-	@echo "Starting PyGhidra MCP server..."
-	uv run pyghidra-mcp
+	uv run ghidra-advanced-mcp --config "$(WORKER_CONFIG)"
+
+run-direct:
+	uv run pyghidra-mcp --transport streamable-http
 
 # Testing targets
 test: test-unit test-integration
