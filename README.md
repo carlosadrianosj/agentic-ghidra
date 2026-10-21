@@ -1,8 +1,9 @@
 # Ghidra-advanced-MCP
 
 Fork of [pyghidra-mcp](https://github.com/clearbluejar/pyghidra-mcp) (v0.2.7) extended with a
-212-operation headless catalog, isolated local workers, and team investigations — validated against
-real Ghidra 12.1.4 on AArch64, ARM32, x86-64, and native Mach-O ARM64.
+212-operation headless catalog, isolated local workers, team investigations, and a scriptable
+REST API — validated against real Ghidra 12.1.4 on AArch64, ARM32, x86-64, and native Mach-O
+ARM64.
 
 ## What is included
 
@@ -18,6 +19,8 @@ real Ghidra 12.1.4 on AArch64, ARM32, x86-64, and native Mach-O ARM64.
   projects, ports, and Chroma indexes; task queue with safe cancellation and restart.
 - **Investigations** (`investigation.create`): two or more teams analyzing the same binary
   (common SHA-256) with fully isolated projects, indexes, ports, and mutations.
+- **REST API beside MCP**: the supervisor serves `/mcp` and `/api/v1/*` on the same port. One
+  registry, two protocols — chain calls from plain Python/curl for custom RE pipelines.
 - **Trusted code policy**: `ghidra.call`, `ghidra.eval`, and `ghidra.script` require
   `--advanced-trusted-code` (default off). They are session-bound, time-limited, and logged with
   owner/session/write flags. They execute arbitrary code: enable only for trusted local clients.
@@ -34,6 +37,45 @@ GHIDRA_INSTALL_DIR=/path/to/ghidra \
 Workers are started on demand and routed by `worker_id`; see `--help` for the supervisor options
 (max active workers, per-worker ports, decompiler pool size).
 
+## REST API
+
+Same process and port as MCP. Every tool (212 advanced + 20 legacy + 7 management) is callable
+by name with a JSON object of its input schema:
+
+```bash
+curl -s localhost:29950/health | jq .status
+curl -s localhost:29950/api/v1/tools?family=decomp | jq '.count'
+curl -s -XPOST localhost:29950/api/v1/tools/decomp.function \
+  -H 'content-type: application/json' \
+  -d '{"worker_id":"rest_smoke","session_id":"...","function_start":"00100438"}' | jq .result.code
+```
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /health` | liveness plus worker snapshot |
+| `GET /api/v1/tools` | catalog with input schemas; filters `family`, `q`, `read_only` |
+| `GET/POST /api/v1/tools/{name}` | schema / invoke any tool |
+| `POST /api/v1/batch` | sequential calls; `pipeline: true` merges each result into the next arguments |
+| `GET /api/v1/workers`, `POST /api/v1/workers/{id}/{start,stop,restart}` | worker lifecycle |
+| `GET/POST /api/v1/investigations`, `GET /api/v1/investigations/{id}` | team investigations |
+| `GET /api/v1/openapi.json` | machine-readable route list |
+
+Success envelope: `{"status":"ok","tool":...,"duration_ms":...,"session_id":...,"result":...}`.
+Errors map to HTTP by exception kind: `ValueError`→400, `FileNotFoundError`→404,
+`PermissionError`→403, `TimeoutError`→504, unknown tool→404.
+
+**Auth**: dev mode (default, loopback) shares one `rest-local` owner. Pass
+`--rest-api-key <sha256-hex>` (or `GHIDRA_ADVANCED_REST_API_KEY`) to require
+`Authorization: Bearer <token>` / `X-API-Key` on `/api/v1/*`; each key is its own owner for
+session isolation.
+
+**Custom pipelines**: `examples/rest_pipeline.py` chains health → worker start → open →
+function list → decompile → constant search → close → stop using only `urllib`:
+
+```bash
+python examples/rest_pipeline.py http://127.0.0.1:29950 rest_smoke /path/to/binary
+```
+
 ## Verification
 
 All acceptance evidence below was produced with real Ghidra 12.1.4 (headless, no mocks) and lives
@@ -46,7 +88,8 @@ under `runtime/acceptance/` when generated locally.
 | Annotations incl. branch inversion + reopen persistence, 4 architectures | 32/32 each (`annotations-*.json`) |
 | Supervisor, 3 concurrent MCP clients, isolation, semantic index rebuild | pass (`mcp-evidence.json`, 239 tools) |
 | Same-binary teams (tls/raw), isolated mutations, restart survival | pass (`investigations-evidence.json`) |
-| Unit suite | 254 passed, 1 skipped |
+| REST pipeline over real worker (open→decompile→close) | pass (`rest-smoke.json`) |
+| Unit suite (incl. REST contract tests) | 262 passed, 1 skipped |
 
 Regenerate with:
 
