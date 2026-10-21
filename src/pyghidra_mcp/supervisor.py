@@ -4,15 +4,19 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import ipaddress
 import json
 import logging
+import os
 import signal
 import sys
 from asyncio.streams import FlowControlMixin
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 
+import anyio
 import click
 import uvicorn
 from mcp import types
@@ -30,6 +34,7 @@ from pyghidra_mcp.supervisor_runtime import (
     load_config,
     reserve_port,
 )
+from pyghidra_mcp.telemetry import METRICS, measure
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +69,43 @@ def _error(message: str) -> types.CallToolResult:
     )
 
 
-def create_server(runtime: SupervisorRuntime) -> Server:
-    server = Server("ghidra-advanced-mcp", version=__version__)
+_transport_owners: ContextVar[set[object] | None] = ContextVar(
+    "supervisor_transport_owners", default=None
+)
+
+
+class _OwnedServer(Server):
+    """Release upstream ownership when the downstream MCP transport finishes."""
+
+    def __init__(self, runtime: SupervisorRuntime):
+        super().__init__("ghidra-advanced-mcp", version=__version__)
+        self.runtime = runtime
+
+    async def run(self, *args, **kwargs) -> None:
+        owners: set[object] = set()
+        token = _transport_owners.set(owners)
+        try:
+            await super().run(*args, **kwargs)
+        finally:
+            _transport_owners.reset(token)
+            # HTTP DELETE cancels an AnyIO scope; shield against its level
+            # cancellation as well as direct asyncio task cancellation.
+            with anyio.CancelScope(shield=True):
+                cleanup = asyncio.gather(
+                    *(self.runtime.release_owner(owner) for owner in owners)
+                )
+                while True:
+                    try:
+                        await asyncio.shield(cleanup)
+                        break
+                    except asyncio.CancelledError:
+                        if cleanup.done():
+                            cleanup.result()
+                            break
+
+
+def _management_tools() -> list[types.Tool]:
+    """Describe supervisor-only controls without coupling schema construction to routing."""
     status_tool = types.Tool(
         name="worker_status",
         description=(
@@ -82,12 +122,20 @@ def create_server(runtime: SupervisorRuntime) -> Server:
         name="worker_restart",
         description=(
             "Explicitly stop, save and close one worker, then reconnect a replacement for the same "
-            "project. In-flight requests may fail and are never replayed or rerouted. "
-            "Forced shutdown is reported because it risks unsaved changes."
+            "project. Refuses active or queued calls unless force=true explicitly accepts unknown "
+            "outcomes. Requests are never replayed or rerouted; shutdown save failures "
+            "are reported."
         ),
         inputSchema={
             "type": "object",
-            "properties": {"worker_id": {"type": "string", "minLength": 1}},
+            "properties": {
+                "worker_id": {"type": "string", "minLength": 1},
+                "force": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Override busy refusal; in-flight outcomes may be unknown.",
+                },
+            },
             "required": ["worker_id"],
             "additionalProperties": False,
         },
@@ -95,28 +143,166 @@ def create_server(runtime: SupervisorRuntime) -> Server:
             readOnlyHint=False, destructiveHint=False, idempotentHint=False
         ),
     )
+    lifecycle_tools = [
+        types.Tool(
+            name=name,
+            description=description,
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "worker_id": {"type": "string", "minLength": 1},
+                    **(
+                        {
+                            "force": {
+                                "type": "boolean",
+                                "default": False,
+                                "description": "Override busy refusal with unknown-outcome risk.",
+                            }
+                        }
+                        if name == "worker_stop"
+                        else {}
+                    ),
+                },
+                "required": ["worker_id"],
+                "additionalProperties": False,
+            },
+            annotations=types.ToolAnnotations(readOnlyHint=False, destructiveHint=False),
+        )
+        for name, description in (
+            (
+                "worker_start",
+                "Start the explicitly selected worker on demand, respecting the active JVM cap.",
+            ),
+            (
+                "worker_stop",
+                "Save and close the selected worker. Refuses busy workers unless "
+                "force=true; never evicts others.",
+            ),
+        )
+    ]
+    investigation_tools = [
+        types.Tool(
+            name="investigation.create",
+            description=(
+                "Snapshot one binary once and create isolated per-team projects, indexes "
+                "and workers. Teams investigate the same immutable source independently; "
+                "original source is never mutated."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "binary_path": {"type": "string", "minLength": 1},
+                    "teams": {
+                        "type": "array",
+                        "items": {"type": "string", "minLength": 1},
+                        "minItems": 2,
+                        "uniqueItems": True,
+                    },
+                    "name": {"type": ["string", "null"], "default": None},
+                    "start": {"type": "boolean", "default": True},
+                },
+                "required": ["binary_path", "teams"],
+                "additionalProperties": False,
+            },
+            annotations=types.ToolAnnotations(readOnlyHint=False, destructiveHint=False),
+        ),
+        types.Tool(
+            name="investigation.list",
+            description="List persisted investigations and their isolated team workers.",
+            inputSchema={"type": "object", "properties": {}, "additionalProperties": False},
+            annotations=types.ToolAnnotations(readOnlyHint=True),
+        ),
+        types.Tool(
+            name="investigation.status",
+            description=(
+                "Inspect one investigation's immutable source identity and per-team worker states."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {"investigation_id": {"type": "string", "minLength": 1}},
+                "required": ["investigation_id"],
+                "additionalProperties": False,
+            },
+            annotations=types.ToolAnnotations(readOnlyHint=True),
+        ),
+    ]
+    return [status_tool, restart_tool, *lifecycle_tools, *investigation_tools]
+
+
+async def _dispatch(
+    runtime: SupervisorRuntime, name: str, arguments: dict[str, Any], owner: object
+) -> types.CallToolResult:
+    try:
+        if name == "worker_status":
+            if "worker_id" in arguments:
+                return _result(runtime.worker(arguments["worker_id"]).status())
+            return _result(
+                {
+                    "workers": [worker.status() for worker in runtime.workers.values()],
+                    "max_active_workers": runtime.config.max_active_workers,
+                    "metrics": METRICS.snapshot(),
+                }
+            )
+        if name in {"worker_start", "worker_stop", "worker_restart"}:
+            method = {
+                "worker_start": runtime.start_worker,
+                "worker_stop": runtime.stop_worker,
+                "worker_restart": runtime.restart,
+            }[name]
+            options = {} if name == "worker_start" else {"force": arguments.get("force", False)}
+            return _result(await method(arguments.get("worker_id"), **options))
+        if name.startswith("investigation."):
+            return await _dispatch_investigation(runtime, name, arguments)
+        if not any(tool.name == name for tool in runtime.tools):
+            return _error(f"Unknown tool: {name}")
+        # Ownership comes only from MCP transport session identity, never caller metadata.
+        return await runtime.call(name, arguments, owner=owner)
+    except Exception as exc:
+        return _error(str(exc))
+
+
+async def _dispatch_investigation(
+    runtime: SupervisorRuntime, name: str, arguments: dict[str, Any]
+) -> types.CallToolResult:
+    if name == "investigation.create":
+        return _result(
+            await runtime.investigations.create(
+                arguments.get("binary_path"),
+                arguments.get("teams"),
+                name=arguments.get("name"),
+                start=arguments.get("start", True),
+            )
+        )
+    if name == "investigation.list":
+        return _result(runtime.investigations.list())
+    if name == "investigation.status":
+        return _result(await runtime.investigations.status(arguments.get("investigation_id")))
+    return _error(f"Unknown tool: {name}")
+
+
+def create_server(runtime: SupervisorRuntime) -> Server:
+    server = _OwnedServer(runtime)
+    management_tools = _management_tools()
 
     @server.list_tools()
     async def list_tools() -> list[types.Tool]:
-        return [*(routed_tool(tool) for tool in runtime.tools), status_tool, restart_tool]
+        return [
+            *(routed_tool(tool) for tool in runtime.tools),
+            *management_tools,
+        ]
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any]) -> types.CallToolResult:
-        try:
-            if name == "worker_status":
-                if "worker_id" in arguments:
-                    return _result(runtime.worker(arguments["worker_id"]).status())
-                return _result(
-                    {"workers": [worker.status() for worker in runtime.workers.values()]}
-                )
-            if name == "worker_restart":
-                return _result(await runtime.restart(arguments.get("worker_id")))
-            if name not in {tool.name for tool in runtime.tools}:
-                return _error(f"Unknown tool: {name}")
-            # Return the original result object: content, structuredContent, isError and metadata.
-            return await runtime.call(name, arguments)
-        except Exception as exc:
-            return _error(str(exc))
+        owner = server.request_context.session
+        owners = _transport_owners.get()
+        if owners is None:
+            raise RuntimeError("Supervisor request has no owning MCP transport")
+        owners.add(owner)
+        with measure("mcp_request"):
+            result = await _dispatch(runtime, name, arguments, owner)
+            if result.isError:
+                METRICS.error("mcp_request")
+            return result
 
     return server
 
@@ -221,6 +407,13 @@ async def _close_after_cancellation(runtime: SupervisorRuntime) -> None:
 
 
 async def run_supervisor(config: SupervisorConfig, host: str, port: int, transport: str) -> None:
+    if os.environ.get("GHIDRA_ADVANCED_TRUSTED_CODE", "").lower() in {"1", "true", "yes"}:
+        try:
+            loopback = ipaddress.ip_address(host).is_loopback
+        except ValueError:
+            loopback = host.lower() == "localhost"
+        if not loopback:
+            raise ValueError("Trusted code execution requires a loopback-only supervisor")
     runtime = SupervisorRuntime(config)
     listener = reserve_port(host, port) if transport == "streamable-http" else None
     loop = asyncio.get_running_loop()
@@ -276,10 +469,19 @@ def main(config_path: Path, host: str, port: int, transport: str) -> None:
 
     Config paths are relative to the JSON file. Each worker requires worker_id,
     port and project_path; project_name defaults to my_project, max_workers to 1
-    and input_paths to []. Use separate, non-nested project directories. Optional
-    log_directory defaults to .runtime/logs; startup_timeout defaults to 180s and
-    shutdown_timeout to 60s. Shutdown first sends SIGINT to save and close each
-    project, then escalates with an unsaved-changes warning if the deadline expires.
+    and input_paths to []. Workers start only on explicitly routed demand; schema
+    discovery does not start a JVM. Use separate, non-nested project directories.
+    max_active_workers defaults to 2; decompiler_pool_size per worker defaults to 2.
+    max_queued_calls per worker defaults to 32. Background import candidate capacity
+    defaults to 8 (PYGHIDRA_MCP_MAX_PENDING_IMPORTS). Stop/restart refuse active calls,
+    queued work, background tasks or pending transactions unless force=true.
+    Analysis task capacity defaults to 32 (PYGHIDRA_MCP_MAX_PENDING_TASKS).
+    investigation_directory defaults to runtime/investigations beside the config.
+    investigation.create snapshots one source binary and makes independent per-team
+    projects/indexes; persisted investigations load without starting their workers.
+    Optional log_directory defaults to .runtime/logs; startup_timeout defaults to
+    180s and shutdown_timeout to 60s. Shutdown first sends SIGINT to save and close
+    each project, then escalates with an unsaved-changes warning if the deadline expires.
     """
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     try:

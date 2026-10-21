@@ -1,0 +1,26 @@
+name: Public tool catalog
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install package and boundary test dependencies
+        run: python -m pip install -e . pytest pytest-asyncio jsonschema
+      - name: Compare pinned interface facts and real handlers
+        run: python tools/check_catalog.py --fetch-reference --matrix catalog-matrix.json
+      - name: Check consumer-visible validation boundaries
+        run: python -m pytest tests/unit/test_advanced_catalog.py -q
+      - uses: actions/upload-artifact@v4
+        with:
+          name: catalog-matrix
+          path: catalog-matrix.json

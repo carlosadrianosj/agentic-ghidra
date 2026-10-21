@@ -4,6 +4,8 @@ from collections.abc import Callable
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
+from pyghidra_mcp.telemetry import METRICS, measure
+
 if TYPE_CHECKING:
     from ghidra.app.decompiler import DecompInterface
 
@@ -48,7 +50,13 @@ class DecompilerPool:
             if self._closed:
                 raise RuntimeError("Decompiler pool is closed")
 
-        if not self._slots.acquire(timeout=timeout):
+        METRICS.queue("decompiler_pool", 1)
+        try:
+            with measure("decompiler_pool_wait"):
+                acquired = self._slots.acquire(timeout=timeout)
+        finally:
+            METRICS.queue("decompiler_pool", -1)
+        if not acquired:
             raise TimeoutError(f"Timed out waiting for a decompiler after {timeout:g} seconds")
 
         decompiler = None

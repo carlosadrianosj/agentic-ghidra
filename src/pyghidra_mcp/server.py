@@ -18,6 +18,8 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.server import Settings as FastMCPSettings
 
 from pyghidra_mcp import __version__, mcp_tools
+from pyghidra_mcp.advanced.legacy import register_legacy_tools
+from pyghidra_mcp.advanced.registry import get_runtime, register_advanced_tools
 from pyghidra_mcp.context import PyGhidraContext
 from pyghidra_mcp.context_protocol import MCPContext
 from pyghidra_mcp.gui_context import GuiPyGhidraContext
@@ -127,26 +129,8 @@ mcp._mcp_server.version = __version__
 
 
 def register_common_tools(server: FastMCP) -> None:
-    server.tool()(mcp_tools.decompile_function)
-    server.tool()(mcp_tools.search_symbols_by_name)
-    server.tool()(mcp_tools.search_code)
-    server.tool()(mcp_tools.list_project_binaries)
-    server.tool()(mcp_tools.list_project_binary_metadata)
-    server.tool()(mcp_tools.rename_function)
-    server.tool()(mcp_tools.rename_variable)
-    server.tool()(mcp_tools.save)
-    server.tool()(mcp_tools.set_variable_type)
-    server.tool()(mcp_tools.set_function_prototype)
-    server.tool()(mcp_tools.set_comment)
-    server.tool()(mcp_tools.delete_project_binary)
-    server.tool()(mcp_tools.list_exports)
-    server.tool()(mcp_tools.list_imports)
-    server.tool()(mcp_tools.list_xrefs)
-    server.tool()(mcp_tools.search_strings)
-    server.tool()(mcp_tools.read_bytes)
-    server.tool()(mcp_tools.disassemble)
-    server.tool()(mcp_tools.gen_callgraph)
-    server.tool()(mcp_tools.import_binary)
+    register_legacy_tools(server)
+    register_advanced_tools(server)
 
 
 def register_gui_tools(server: FastMCP) -> None:
@@ -233,6 +217,8 @@ def init_pyghidra_context(  # noqa: C901
         except ValueError as e:
             click.echo(f"Error: {e}", err=True)
         sys.exit(0)
+    # Install ownership/index hooks before any long-running background work starts.
+    get_runtime(pyghidra_context)
 
     imported_programs: list[str] = []
     if len(bin_paths) > 0:
@@ -378,6 +364,9 @@ def run_gui_server(
         launcher.wait_for_shutdown()
         context = getattr(mcp, "_pyghidra_context", None)
         if context is not None:
+            runtime = getattr(context, "_advanced_runtime", None)
+            if runtime is not None:
+                runtime.close()
             context.close()
         # Only now: until close() returns, a second Ctrl+C still has to force-exit.
         remove_console_ctrl_handler(console_handler_ref)
@@ -397,6 +386,9 @@ def run_headless_server(mcp: FastMCP, transport: str) -> None:
         interrupted = True
         logger.info("Interrupted; starting clean shutdown.")
     finally:
+        runtime = getattr(mcp._pyghidra_context, "_advanced_runtime", None)
+        if runtime is not None:
+            runtime.close()
         mcp._pyghidra_context.close()  # type: ignore
 
     # Exit only after close() has saved and closed everything, so the
@@ -450,6 +442,16 @@ def run_headless_server(mcp: FastMCP, transport: str) -> None:
     envvar="GHIDRA_ADVANCED_MCP_HOST",
     show_default=True,
     help="Host to listen on for HTTP-based transports.",
+)
+@optgroup.option(
+    "--trusted-code/--no-trusted-code",
+    default=False,
+    envvar="GHIDRA_ADVANCED_TRUSTED_CODE",
+    show_default=True,
+    help=(
+        "Allow arbitrary session-bound Python/Java/scripts. "
+        "Trusted local clients only; not a sandbox."
+    ),
 )
 @optgroup.option(
     "--project-path",
@@ -577,6 +579,7 @@ def main(
     delete_project_binary: str | None,
     sym_file_path: str | None,
     symbols_path: str | None,
+    trusted_code: bool,
 ) -> None:
     """PyGhidra Command-Line MCP server
 
@@ -586,6 +589,9 @@ def main(
     For streamable-http and sse, it will start an HTTP server on the specified port (default 29841).
 
     """
+    if trusted_code and host not in {"127.0.0.1", "::1", "localhost"}:
+        raise click.UsageError("Trusted execution requires a loopback-only listener")
+    os.environ["GHIDRA_ADVANCED_TRUSTED_CODE"] = "1" if trusted_code else "0"
     try:
         project_spec = ProjectSpec.from_cli(
             project_path,

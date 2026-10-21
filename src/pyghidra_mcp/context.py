@@ -3,8 +3,10 @@ import hashlib
 import json
 import logging
 import multiprocessing
+import os
 import threading
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Union
@@ -20,6 +22,7 @@ from pyghidra_mcp.models import (
     ProgramInfo as ProgramInfoModel,
     SkippedImport as SkippedImportModel,
 )
+from pyghidra_mcp.telemetry import METRICS, measure
 
 if TYPE_CHECKING:
     from ghidra.base.project import GhidraProject
@@ -136,6 +139,10 @@ class PyGhidraContext(IndexingMixin):
         self._closing = False
         self._analysis_future: concurrent.futures.Future | None = None
         self._analysis_futures: set[concurrent.futures.Future] = set()
+        self.max_pending_imports = int(os.environ.get("PYGHIDRA_MCP_MAX_PENDING_IMPORTS", "8"))
+        if self.max_pending_imports < 1:
+            raise ValueError("PYGHIDRA_MCP_MAX_PENDING_IMPORTS must be positive")
+        self._pending_imports = 0
         self._init_indexing_state(self.pyghidra_mcp_dir, threaded=self.threaded)
         self.executor = (
             concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers)
@@ -156,6 +163,9 @@ class PyGhidraContext(IndexingMixin):
 
     def close(self, save: bool = True):
         """Stop background work, then save and close the project once."""
+        runtime = getattr(self, "_advanced_runtime", None)
+        if runtime is not None:
+            runtime.close()
         with self._close_lock:
             with self._work_lock:
                 if self._closing:
@@ -194,7 +204,8 @@ class PyGhidraContext(IndexingMixin):
                 if save:
                     logger.info("Saving %s/%s: %s", position, program_count, program_name)
                     save_started = time.monotonic()
-                    self.project.save(program)
+                    with measure("save"):
+                        self.project.save(program)
                     logger.info("Saved %s in %.1fs.", program_name, time.monotonic() - save_started)
                 self.project.close(program)
             except Exception:
@@ -223,7 +234,8 @@ class PyGhidraContext(IndexingMixin):
         Save changes to all open programs.
         """
         for program_info in self.programs.values():
-            self.project.save(program_info.program)
+            with measure("save"):
+                self.project.save(program_info.program)
 
     def _get_or_create_project(self) -> "GhidraProject":
         """
@@ -347,6 +359,7 @@ class PyGhidraContext(IndexingMixin):
                 logger.error(f"Error deleting program '{program_name}': {e}")
                 return False
 
+    @measure("import")
     def import_binary(
         self, binary_path: str | Path, analyze: bool = False, relative_path: Path | None = None
     ) -> str | list[str]:
@@ -390,7 +403,8 @@ class PyGhidraContext(IndexingMixin):
             program = imported_program
             program.name = program_name
             if program:
-                self.project.saveAs(program, ghidra_folder.pathname, program_name, True)
+                with measure("save"):
+                    self.project.saveAs(program, ghidra_folder.pathname, program_name, True)
                 self.project.close(imported_program)
                 program = self.project.openProgram(ghidra_folder.pathname, program_name, False)
 
@@ -485,6 +499,33 @@ class PyGhidraContext(IndexingMixin):
     def _is_binary_file(self, path: Path) -> bool:
         return is_ghidra_importable(path)
 
+    def _queued_import(self, queued_at, candidates):
+        remaining = len(candidates)
+        imported = []
+        try:
+            for candidate in candidates:
+                METRICS.queue("import", -1)
+                METRICS.observe("import_queue_wait", time.perf_counter() - queued_at)
+                remaining -= 1
+                try:
+                    imported.extend(self._import_candidates([candidate], analyze=True))
+                finally:
+                    with self._work_lock:
+                        self._pending_imports -= 1
+            return imported
+        finally:
+            if remaining:
+                METRICS.queue("import", -remaining)
+                with self._work_lock:
+                    self._pending_imports -= remaining
+
+    def _release_import(self, future, count):
+        if future.cancelled():
+            with self._work_lock:
+                self._pending_imports -= count
+            METRICS.queue("import", -count)
+        self._import_callback(future)
+
     def _import_callback(self, future: concurrent.futures.Future):
         """
         A callback function to handle results or exceptions from the import task.
@@ -516,12 +557,25 @@ class PyGhidraContext(IndexingMixin):
             if self._closing:
                 raise RuntimeError("Project context is closing.")
             if self.import_executor and import_plan.candidates:
-                future = self.import_executor.submit(
-                    self._import_candidates,
-                    import_plan.candidates,
-                    analyze=True,
+                count = len(import_plan.candidates)
+                if self._pending_imports + count > self.max_pending_imports:
+                    raise RuntimeError(
+                        f"Import capacity reached ({self._pending_imports} pending, "
+                        f"{count} requested, limit {self.max_pending_imports}); no imports queued"
+                    )
+                self._pending_imports += count
+                METRICS.queue("import", count)
+                try:
+                    future = self.import_executor.submit(
+                        self._queued_import, time.perf_counter(), import_plan.candidates,
+                    )
+                except BaseException:
+                    self._pending_imports -= count
+                    METRICS.queue("import", -count)
+                    raise
+                future.add_done_callback(
+                    lambda done, count=count: self._release_import(done, count)
                 )
-                future.add_done_callback(self._import_callback)
             elif import_plan.candidates:
                 self._import_candidates(import_plan.candidates, analyze=True)
 
@@ -751,6 +805,15 @@ class PyGhidraContext(IndexingMixin):
 
         logger.info("All programs analyzed.")
 
+    @contextmanager
+    def _timed_analysis_lock(self):
+        with measure("analysis_lock_wait"):
+            self._analysis_bundle_host_lock.acquire()
+        try:
+            yield
+        finally:
+            self._analysis_bundle_host_lock.release()
+
     def analyze_program(  # noqa C901
         self,
         df_or_prog: Union["DomainFile", "Program"],
@@ -804,7 +867,7 @@ class PyGhidraContext(IndexingMixin):
             or force_analysis
             or self.force_analysis
         ):
-            with self._analysis_bundle_host_lock:
+            with self._timed_analysis_lock():
                 GhidraScriptUtil.acquireBundleHostReference()
 
                 if program and program.getFunctionManager().getFunctionCount() > 1000:
@@ -851,7 +914,8 @@ class PyGhidraContext(IndexingMixin):
 
                 logger.info(f"Starting Ghidra analysis of {program}...")
                 try:
-                    flat_api.analyzeAll(program)
+                    with measure("analyze"):
+                        flat_api.analyzeAll(program)
                     if hasattr(GhidraProgramUtilities, "setAnalyzedFlag"):
                         GhidraProgramUtilities.setAnalyzedFlag(program, True)
                     elif hasattr(GhidraProgramUtilities, "markProgramAnalyzed"):
@@ -860,7 +924,8 @@ class PyGhidraContext(IndexingMixin):
                         raise Exception("Missing set analyzed flag method!")
                 finally:
                     GhidraScriptUtil.releaseBundleHostReference()
-                    self.project.save(program)
+                    with measure("save"):
+                        self.project.save(program)
         else:
             logger.info(f"Analysis already complete.. skipping {program}!")
 
@@ -1051,7 +1116,11 @@ class PyGhidraContext(IndexingMixin):
         return decomp
 
     def _create_decompiler_pool(self, program: "Program") -> DecompilerPool:
-        pool_size = 2 if self.threaded else 1
+        pool_size = int(
+            os.environ.get("PYGHIDRA_MCP_DECOMPILER_POOL_SIZE", "2" if self.threaded else "1")
+        )
+        if not 1 <= pool_size <= 32:
+            raise ValueError("PYGHIDRA_MCP_DECOMPILER_POOL_SIZE must be between 1 and 32")
         return DecompilerPool(lambda: self.setup_decompiler(program), size=pool_size)
 
     @staticmethod

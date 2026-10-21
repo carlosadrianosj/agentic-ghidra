@@ -186,8 +186,23 @@ def dynamic_config(tmp_path, count=2, **settings):
             reservation.close()
 
 
+@pytest.fixture
+def probe_catalog(monkeypatch):
+    from mcp import types
+
+    from pyghidra_mcp.advanced import registry
+    monkeypatch.setattr(registry, "static_tool_catalog", lambda: [
+        types.Tool(name="probe", inputSchema={
+            "type": "object", "properties": {"barrier": {"type": "string"}},
+            "additionalProperties": False,
+        })
+    ])
+
+
 @pytest.mark.asyncio
-async def test_workers_run_concurrently_and_restart_selected_project(tmp_path, monkeypatch):
+async def test_workers_run_concurrently_and_restart_selected_project(
+    tmp_path, monkeypatch, probe_catalog
+):
     config = dynamic_config(tmp_path)
     monkeypatch.setattr(
         WorkerConfig,
@@ -224,15 +239,16 @@ async def test_workers_run_concurrently_and_restart_selected_project(tmp_path, m
         result = await runtime.call("probe", {"worker_id": "analysis_a"})
         assert result.structuredContent["pid"] == restarted["pid"]
         await runtime.worker("analysis_a").stop()
-        with pytest.raises(RuntimeError, match="unavailable"):
-            await runtime.call("probe", {"worker_id": "analysis_a"})
+        stopped_pid = runtime.worker("analysis_a").process.pid
+        resumed = await runtime.call("probe", {"worker_id": "analysis_a"})
+        assert resumed.structuredContent["pid"] != stopped_pid
     finally:
         await runtime.close()
     assert all(worker.process.returncode is not None for worker in runtime.workers.values())
 
 
 @pytest.mark.asyncio
-async def test_failed_startup_closes_already_started_workers(tmp_path, monkeypatch):
+async def test_failed_demand_does_not_stop_another_worker(tmp_path, monkeypatch, probe_catalog):
     config = dynamic_config(tmp_path)
     monkeypatch.setattr(
         WorkerConfig,
@@ -244,15 +260,23 @@ async def test_failed_startup_closes_already_started_workers(tmp_path, monkeypat
         ),
     )
     runtime = SupervisorRuntime(config)
-    with pytest.raises(RuntimeError, match="startup failed"):
-        await runtime.start()
+    await runtime.start()
+    try:
+        await runtime.start_worker("analysis_a")
+        with pytest.raises(RuntimeError, match="startup failed"):
+            await runtime.start_worker("analysis_b")
+        assert runtime.worker("analysis_a").status()["state"] == "ready"
+    finally:
+        await runtime.close()
     assert all(worker.process.returncode is not None for worker in runtime.workers.values())
     assert runtime.worker("analysis_b").status()["state"] == "failed"
     assert "exit 7" in runtime.worker("analysis_b").status()["recent_failure"]
 
 
 @pytest.mark.asyncio
-async def test_startup_refuses_endpoint_with_wrong_ownership_token(tmp_path, monkeypatch):
+async def test_startup_refuses_endpoint_with_wrong_ownership_token(
+    tmp_path, monkeypatch, probe_catalog
+):
     config = dynamic_config(tmp_path, count=1)
     wrong_worker = MCP_WORKER.replace(
         'os.environ["PYGHIDRA_MCP_WORKER_TOKEN"]', '"not-the-owned-worker"'
@@ -263,14 +287,18 @@ async def test_startup_refuses_endpoint_with_wrong_ownership_token(tmp_path, mon
         lambda worker: [sys.executable, "-c", wrong_worker, str(worker.port), worker.worker_id],
     )
     runtime = SupervisorRuntime(config)
-    with pytest.raises(RuntimeError, match="startup failed"):
-        await runtime.start()
+    await runtime.start()
+    try:
+        with pytest.raises(RuntimeError, match="startup failed"):
+            await runtime.start_worker("analysis_a")
+    finally:
+        await runtime.close()
     assert runtime.worker("analysis_a").process.returncode is not None
     assert runtime.worker("analysis_a").status()["state"] == "failed"
 
 
 @pytest.mark.asyncio
-async def test_forced_shutdown_reports_unsaved_change_risk(tmp_path, monkeypatch):
+async def test_forced_shutdown_reports_unsaved_change_risk(tmp_path, monkeypatch, probe_catalog):
     config = dynamic_config(tmp_path, count=1, shutdown_timeout=0.1)
     monkeypatch.setattr(
         WorkerConfig,
@@ -287,6 +315,7 @@ async def test_forced_shutdown_reports_unsaved_change_risk(tmp_path, monkeypatch
     runtime = SupervisorRuntime(config)
     try:
         await runtime.start()
+        await runtime.start_worker("analysis_a")
         await runtime.worker("analysis_a").stop()
         status = runtime.worker("analysis_a").status()
         assert status["returncode"] is not None
@@ -309,3 +338,84 @@ def test_rejects_hidden_project_path_components_before_startup(tmp_path, project
     )
     with pytest.raises(ValueError, match="hidden path components"):
         load_config(path)
+
+
+@pytest.mark.asyncio
+async def test_transport_owners_keep_distinct_upstream_sessions_and_release_only_their_own(
+    tmp_path, monkeypatch, probe_catalog
+):
+    monkeypatch.setattr(
+        WorkerConfig,
+        "command",
+        lambda worker: [sys.executable, "-c", MCP_WORKER, str(worker.port), worker.worker_id],
+    )
+    runtime = SupervisorRuntime(dynamic_config(tmp_path, count=1))
+    first, second = object(), object()
+    try:
+        await runtime.start()
+        await runtime.call("probe", {"worker_id": "analysis_a"}, owner=first)
+        await runtime.call("probe", {"worker_id": "analysis_a"}, owner=second)
+        worker = runtime.worker("analysis_a")
+        assert worker.status()["client_sessions"] == 2
+        first_connection = await worker.client(first)
+        second_connection = await worker.client(second)
+        assert first_connection.session is not second_connection.session
+        await runtime.release_owner(first)
+        assert first_connection.task.done()
+        assert not second_connection.task.done()
+        assert worker.status()["client_sessions"] == 1
+        await runtime.call("probe", {"worker_id": "analysis_a"}, owner=second)
+        await runtime.release_owner(second)
+        assert second_connection.task.done()
+        assert worker.status()["client_sessions"] == 0
+    finally:
+        await runtime.close()
+    with reserve_port("127.0.0.1", worker.config.port):
+        assert worker.process.returncode is not None
+
+
+@pytest.mark.asyncio
+async def test_background_worker_health_prevents_unsafe_stop_and_restart(
+    tmp_path, monkeypatch, probe_catalog
+):
+    from mcp import types
+
+    from pyghidra_mcp.advanced import registry
+
+    catalog = registry.static_tool_catalog()
+    health_tool = types.Tool(
+        name="health.ping", inputSchema={"type": "object", "properties": {}}
+    )
+    monkeypatch.setattr(registry, "static_tool_catalog", lambda: [*catalog, health_tool])
+    source = MCP_WORKER.replace(
+        "    })]",
+        '    }), types.Tool(name="health.ping", '
+        'inputSchema={"type": "object", "properties": {}})]',
+        1,
+    ).replace(
+        '    if "barrier" in arguments:',
+        '    if name == "health.ping":\n'
+        '        return types.CallToolResult(content=[], '
+        'structuredContent={"active_tasks": 1})\n'
+        '    if "barrier" in arguments:',
+        1,
+    )
+    monkeypatch.setattr(
+        WorkerConfig,
+        "command",
+        lambda worker: [sys.executable, "-c", source, str(worker.port), worker.worker_id],
+    )
+    runtime = SupervisorRuntime(dynamic_config(tmp_path, count=1))
+    try:
+        await runtime.start()
+        await runtime.start_worker("analysis_a")
+        worker = runtime.worker("analysis_a")
+        original_pid = worker.process.pid
+        with pytest.raises(RuntimeError, match=r"active_tasks.*1"):
+            await runtime.stop_worker("analysis_a")
+        with pytest.raises(RuntimeError, match=r"active_tasks.*1"):
+            await runtime.restart("analysis_a")
+        assert worker.process.pid == original_pid
+        assert worker.state == "ready"
+    finally:
+        await runtime.close()

@@ -9,6 +9,7 @@ from typing import Any
 import chromadb
 from chromadb.config import Settings
 
+from pyghidra_mcp.telemetry import METRICS, measure
 from pyghidra_mcp.tools import DEFAULT_DECOMPILE_TIMEOUT_SECONDS, GhidraTools
 
 logger = logging.getLogger(__name__)
@@ -84,19 +85,31 @@ class IndexingMixin:
                 return False
 
             if self.index_executor is not None:
-                future = self.index_executor.submit(
-                    self._index_program,
-                    program_info,
-                    code=code,
-                    strings=strings,
-                )
-                self._index_futures[binary_name] = future
-                future.add_done_callback(
-                    lambda done_future, name=binary_name: self._index_done_callback(
-                        name, done_future
+                METRICS.queue("indexing", 1)
+                try:
+                    future = self.index_executor.submit(
+                        self._index_queued_program,
+                        time.perf_counter(),
+                        program_info,
+                        code=code,
+                        strings=strings,
                     )
+                except BaseException:
+                    METRICS.queue("indexing", -1)
+                    raise
+                self._index_futures[binary_name] = future
+            else:
+                future = None
+
+        if future is not None:
+            # Completed futures invoke callbacks immediately; never register
+            # while holding the lock that the callback itself acquires.
+            future.add_done_callback(
+                lambda done_future, name=binary_name: self._index_done_callback(
+                    name, done_future
                 )
-                return True
+            )
+            return True
 
         self._index_program(program_info, code=code, strings=strings)
         return True
@@ -236,6 +249,12 @@ class IndexingMixin:
         program_info.strings = GhidraTools(program_info).get_all_strings()
         logger.info("Loaded %s strings for %s", len(program_info.strings), program_info.name)
 
+    def _index_queued_program(self, queued_at, program_info, **options):
+        METRICS.queue("indexing", -1)
+        METRICS.observe("indexing_queue_wait", time.perf_counter() - queued_at)
+        self._index_program(program_info, **options)
+
+    @measure("indexing")
     def _index_program(
         self,
         program_info: Any,
@@ -254,10 +273,12 @@ class IndexingMixin:
         future: concurrent.futures.Future,
     ) -> None:
         with self._index_lock:
-            self._index_futures.pop(binary_name, None)
+            if self._index_futures.get(binary_name) is future:
+                self._index_futures.pop(binary_name)
         # CancelledError derives from BaseException, so shutdown-cancelled work
         # must be checked for explicitly or it escapes as a spurious callback error.
         if future.cancelled():
+            METRICS.queue("indexing", -1)
             logger.info("Background indexing for %s cancelled during shutdown.", binary_name)
             return
         try:

@@ -111,6 +111,19 @@ def mcp_error_handler(func):
 # ---------------------------------------------------------------------------------
 
 
+async def _drain_decompilation(task: asyncio.Task) -> None:
+    """Keep program ownership until the native decompiler actually releases it."""
+    while not task.done():
+        try:
+            await asyncio.shield(task)
+        except asyncio.CancelledError:
+            continue
+        except Exception:
+            break
+    if not task.cancelled():
+        task.exception()
+
+
 @mcp_error_handler
 async def decompile_function(
     binary_name: str,
@@ -147,13 +160,15 @@ async def decompile_function(
         return result
 
     for target in targets:
+        task = asyncio.create_task(asyncio.to_thread(_decompile_target, target))
         try:
             result = await asyncio.wait_for(
-                asyncio.to_thread(_decompile_target, target),
+                asyncio.shield(task),
                 timeout=timeout_sec + DECOMPILE_TIMEOUT_GRACE_SECONDS,
             )
             results.append(result)
         except asyncio.TimeoutError:
+            await _drain_decompilation(task)
             results.append(
                 DecompiledFunction(
                     name=target,
@@ -161,6 +176,9 @@ async def decompile_function(
                     error=f"Decompilation timed out after {timeout_sec:g} seconds",
                 )
             )
+        except asyncio.CancelledError:
+            await _drain_decompilation(task)
+            raise
         except Exception as e:
             results.append(DecompiledFunction(name=target, code="", error=str(e)))
     return results
