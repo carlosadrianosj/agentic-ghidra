@@ -1,0 +1,6180 @@
+{
+  "source_revision": "307b461cdbbedfbafb3771333f21875b745f940e",
+  "tools": [
+    {
+      "name": "health.ping",
+      "properties": {},
+      "required": [],
+      "defaults": {}
+    },
+    {
+      "name": "mcp.response_format",
+      "properties": {},
+      "required": [],
+      "defaults": {}
+    },
+    {
+      "name": "analysis.analyzers.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "offset": 0,
+        "limit": 100,
+        "query": null
+      }
+    },
+    {
+      "name": "analysis.analyzers.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "name",
+        "enabled"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "analysis.clear_cache",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "analysis.options.get",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "name"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "analysis.options.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "offset": 0,
+        "limit": 100,
+        "query": null
+      }
+    },
+    {
+      "name": "analysis.options.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "value": {}
+      },
+      "required": [
+        "session_id",
+        "name",
+        "value"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "analysis.status",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "analysis.update",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "analysis.update_and_wait",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "bookmark.add",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "category": {
+          "type": "string"
+        },
+        "comment": {
+          "type": "string"
+        },
+        "bookmark_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "address",
+        "category",
+        "comment"
+      ],
+      "defaults": {
+        "bookmark_type": "NOTE"
+      }
+    },
+    {
+      "name": "bookmark.clear",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "length": {
+          "type": "integer"
+        },
+        "bookmark_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "start"
+      ],
+      "defaults": {
+        "end": null,
+        "length": null,
+        "bookmark_type": null
+      }
+    },
+    {
+      "name": "bookmark.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "bookmark_type": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "address": null,
+        "bookmark_type": null,
+        "offset": 0,
+        "limit": 100
+      }
+    },
+    {
+      "name": "bookmark.remove",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "bookmark_type": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {
+        "bookmark_type": null,
+        "category": null
+      }
+    },
+    {
+      "name": "class.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parent": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "name"
+      ],
+      "defaults": {
+        "parent": null
+      }
+    },
+    {
+      "name": "comment.get",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "comment_type": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "address": null,
+        "comment_type": "eol",
+        "function_start": null,
+        "scope": "listing"
+      }
+    },
+    {
+      "name": "comment.get_all",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "include_function": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {
+        "include_function": true
+      }
+    },
+    {
+      "name": "comment.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "comment_type": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "case_sensitive": {
+          "type": "boolean"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "start": null,
+        "end": null,
+        "comment_type": null,
+        "query": null,
+        "case_sensitive": false,
+        "offset": 0,
+        "limit": 100
+      }
+    },
+    {
+      "name": "comment.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "comment": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "comment_type": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "comment"
+      ],
+      "defaults": {
+        "address": null,
+        "comment_type": "eol",
+        "function_start": null,
+        "scope": "listing"
+      }
+    },
+    {
+      "name": "context.get",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "register": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "signed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "register",
+        "address"
+      ],
+      "defaults": {
+        "signed": false
+      }
+    },
+    {
+      "name": "context.ranges",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "register": {
+          "type": "string"
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "register"
+      ],
+      "defaults": {
+        "start": null,
+        "end": null
+      }
+    },
+    {
+      "name": "context.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "register": {
+          "type": "string"
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "length": {
+          "type": "integer"
+        },
+        "value": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "clear": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "register",
+        "start"
+      ],
+      "defaults": {
+        "end": null,
+        "length": null,
+        "value": null,
+        "clear": false
+      }
+    },
+    {
+      "name": "decomp.ast",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "timeout_secs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {
+        "timeout_secs": 30
+      }
+    },
+    {
+      "name": "decomp.function",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "timeout_secs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {
+        "timeout_secs": 30
+      }
+    },
+    {
+      "name": "decomp.global.rename",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "new_name": {
+          "type": "string"
+        },
+        "storage": {
+          "type": "string"
+        },
+        "timeout_secs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name",
+        "new_name"
+      ],
+      "defaults": {
+        "storage": null,
+        "timeout_secs": 30
+      }
+    },
+    {
+      "name": "decomp.global.retype",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "storage": {
+          "type": "string"
+        },
+        "timeout_secs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name",
+        "data_type"
+      ],
+      "defaults": {
+        "storage": null,
+        "timeout_secs": 30
+      }
+    },
+    {
+      "name": "decomp.high_function.summary",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "timeout_secs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {
+        "timeout_secs": 30
+      }
+    },
+    {
+      "name": "decomp.override.get",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "callsite": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "callsite"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "decomp.override.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "callsite": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "signature": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "callsite",
+        "signature"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "decomp.tokens",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "timeout_secs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {
+        "timeout_secs": 30
+      }
+    },
+    {
+      "name": "decomp.trace_type.backward",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "ordinal": {
+          "type": "integer"
+        },
+        "storage": {
+          "type": "string"
+        },
+        "timeout_secs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name"
+      ],
+      "defaults": {
+        "ordinal": null,
+        "storage": null,
+        "timeout_secs": 30
+      }
+    },
+    {
+      "name": "decomp.trace_type.forward",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "ordinal": {
+          "type": "integer"
+        },
+        "storage": {
+          "type": "string"
+        },
+        "timeout_secs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name"
+      ],
+      "defaults": {
+        "ordinal": null,
+        "storage": null,
+        "timeout_secs": 30
+      }
+    },
+    {
+      "name": "decomp.writeback.locals",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "timeout_secs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {
+        "timeout_secs": 30
+      }
+    },
+    {
+      "name": "decomp.writeback.params",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "use_data_types": {
+          "type": "boolean"
+        },
+        "commit_return": {
+          "type": "boolean"
+        },
+        "timeout_secs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {
+        "use_data_types": true,
+        "commit_return": false,
+        "timeout_secs": 30
+      }
+    },
+    {
+      "name": "equate.clear_range",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "length": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "start"
+      ],
+      "defaults": {
+        "end": null,
+        "length": null
+      }
+    },
+    {
+      "name": "equate.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "operand_index": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "address",
+        "name",
+        "value"
+      ],
+      "defaults": {
+        "operand_index": 0
+      }
+    },
+    {
+      "name": "equate.delete",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "operand_index": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "name"
+      ],
+      "defaults": {
+        "address": null,
+        "operand_index": null
+      }
+    },
+    {
+      "name": "equate.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "operand_index": {
+          "type": "integer"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "name": null,
+        "address": null,
+        "operand_index": null,
+        "offset": 0,
+        "limit": 100
+      }
+    },
+    {
+      "name": "external.entrypoint.add",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "external.entrypoint.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "external.entrypoint.remove",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "external.exports.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "offset": 0,
+        "limit": 100
+      }
+    },
+    {
+      "name": "external.function.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "library_name": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "external_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "library_name",
+        "name"
+      ],
+      "defaults": {
+        "external_address": null
+      }
+    },
+    {
+      "name": "external.imports.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "offset": 0,
+        "limit": 100
+      }
+    },
+    {
+      "name": "external.library.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "name"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "external.library.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "external.library.set_path",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "user_defined": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "name",
+        "path"
+      ],
+      "defaults": {
+        "user_defined": true
+      }
+    },
+    {
+      "name": "external.location.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "library_name": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "external_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "library_name"
+      ],
+      "defaults": {
+        "label": null,
+        "external_address": null
+      }
+    },
+    {
+      "name": "external.location.get",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "address": null,
+        "name": null
+      }
+    },
+    {
+      "name": "function.at",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "function.batch.run",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "timeout_secs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "action"
+      ],
+      "defaults": {
+        "query": null,
+        "offset": 0,
+        "limit": 50,
+        "timeout_secs": 30
+      }
+    },
+    {
+      "name": "function.body.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "length": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "start"
+      ],
+      "defaults": {
+        "end": null,
+        "length": null
+      }
+    },
+    {
+      "name": "function.by_name",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "exact": {
+          "type": "boolean"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "name"
+      ],
+      "defaults": {
+        "exact": false,
+        "limit": 20
+      }
+    },
+    {
+      "name": "function.callees",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "function.callers",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "function.calling_convention.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "function.calling_conventions.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "function.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {
+        "name": null
+      }
+    },
+    {
+      "name": "function.delete",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "function.flags.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "varargs": {
+          "type": "boolean"
+        },
+        "inline": {
+          "type": "boolean"
+        },
+        "noreturn": {
+          "type": "boolean"
+        },
+        "custom_storage": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {
+        "varargs": null,
+        "inline": null,
+        "noreturn": null,
+        "custom_storage": null
+      }
+    },
+    {
+      "name": "function.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "offset": 0,
+        "limit": 100,
+        "query": null
+      }
+    },
+    {
+      "name": "function.rename",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "function.report",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "function.return_type.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "data_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "data_type"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "function.signature.get",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "function.signature.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "signature": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "signature"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "function.thunk.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "thunk_target": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "thunk_target"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "function.variables",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "ghidra.call",
+      "properties": {
+        "target": {
+          "type": "string"
+        },
+        "args": {
+          "type": "array",
+          "items": {}
+        },
+        "kwargs": {
+          "type": "object"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "write": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "target"
+      ],
+      "defaults": {
+        "args": null,
+        "kwargs": null,
+        "session_id": null,
+        "write": false
+      }
+    },
+    {
+      "name": "ghidra.eval",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "write": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "defaults": {
+        "session_id": null,
+        "write": false
+      }
+    },
+    {
+      "name": "ghidra.info",
+      "properties": {},
+      "required": [],
+      "defaults": {}
+    },
+    {
+      "name": "ghidra.script",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "script_args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "write": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "defaults": {
+        "session_id": null,
+        "script_args": null,
+        "write": false
+      }
+    },
+    {
+      "name": "graph.basic_blocks",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "graph.call_paths",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "source_function": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "target_function": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "max_depth": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "source_function",
+        "target_function"
+      ],
+      "defaults": {
+        "max_depth": 4,
+        "limit": 10
+      }
+    },
+    {
+      "name": "graph.cfg.edges",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "layout.enum.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "name"
+      ],
+      "defaults": {
+        "category": "/",
+        "size": 4
+      }
+    },
+    {
+      "name": "layout.enum.member.add",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "enum_path": {
+          "type": "string"
+        },
+        "enum_name": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "comment": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "name",
+        "value"
+      ],
+      "defaults": {
+        "enum_path": null,
+        "enum_name": null,
+        "comment": null
+      }
+    },
+    {
+      "name": "layout.enum.member.remove",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "enum_path": {
+          "type": "string"
+        },
+        "enum_name": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "name"
+      ],
+      "defaults": {
+        "enum_path": null,
+        "enum_name": null
+      }
+    },
+    {
+      "name": "layout.inspect.components",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "path": null,
+        "name": null
+      }
+    },
+    {
+      "name": "layout.struct.bitfield.add",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "struct_path": {
+          "type": "string"
+        },
+        "struct_name": {
+          "type": "string"
+        },
+        "byte_offset": {
+          "type": "integer"
+        },
+        "byte_width": {
+          "type": "integer"
+        },
+        "bit_offset": {
+          "type": "integer"
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "bit_size": {
+          "type": "integer"
+        },
+        "field_name": {
+          "type": "string"
+        },
+        "comment": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "byte_offset",
+        "byte_width",
+        "bit_offset",
+        "data_type",
+        "bit_size"
+      ],
+      "defaults": {
+        "struct_path": null,
+        "struct_name": null,
+        "field_name": null,
+        "comment": null
+      }
+    },
+    {
+      "name": "layout.struct.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "length": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "name"
+      ],
+      "defaults": {
+        "category": "/",
+        "length": 0
+      }
+    },
+    {
+      "name": "layout.struct.field.add",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "struct_path": {
+          "type": "string"
+        },
+        "struct_name": {
+          "type": "string"
+        },
+        "field_name": {
+          "type": "string"
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "length": {
+          "type": "integer"
+        },
+        "comment": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "data_type"
+      ],
+      "defaults": {
+        "struct_path": null,
+        "struct_name": null,
+        "field_name": null,
+        "offset": null,
+        "length": null,
+        "comment": null
+      }
+    },
+    {
+      "name": "layout.struct.field.clear",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "struct_path": {
+          "type": "string"
+        },
+        "struct_name": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "offset"
+      ],
+      "defaults": {
+        "struct_path": null,
+        "struct_name": null
+      }
+    },
+    {
+      "name": "layout.struct.field.comment.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "struct_path": {
+          "type": "string"
+        },
+        "struct_name": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "ordinal": {
+          "type": "integer"
+        },
+        "field_name": {
+          "type": "string"
+        },
+        "comment": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "comment"
+      ],
+      "defaults": {
+        "struct_path": null,
+        "struct_name": null,
+        "offset": null,
+        "ordinal": null,
+        "field_name": null
+      }
+    },
+    {
+      "name": "layout.struct.field.rename",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "struct_path": {
+          "type": "string"
+        },
+        "struct_name": {
+          "type": "string"
+        },
+        "old_name": {
+          "type": "string"
+        },
+        "new_name": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "ordinal": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "new_name"
+      ],
+      "defaults": {
+        "struct_path": null,
+        "struct_name": null,
+        "old_name": null,
+        "offset": null,
+        "ordinal": null
+      }
+    },
+    {
+      "name": "layout.struct.field.replace",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "struct_path": {
+          "type": "string"
+        },
+        "struct_name": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "length": {
+          "type": "integer"
+        },
+        "field_name": {
+          "type": "string"
+        },
+        "comment": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "offset",
+        "data_type"
+      ],
+      "defaults": {
+        "struct_path": null,
+        "struct_name": null,
+        "length": null,
+        "field_name": null,
+        "comment": null
+      }
+    },
+    {
+      "name": "layout.struct.fill_from_decompiler",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "ordinal": {
+          "type": "integer"
+        },
+        "storage": {
+          "type": "string"
+        },
+        "create_new_structure": {
+          "type": "boolean"
+        },
+        "create_class_if_needed": {
+          "type": "boolean"
+        },
+        "timeout_secs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name"
+      ],
+      "defaults": {
+        "ordinal": null,
+        "storage": null,
+        "create_new_structure": true,
+        "create_class_if_needed": false,
+        "timeout_secs": 30
+      }
+    },
+    {
+      "name": "layout.struct.get",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "struct_path": {
+          "type": "string"
+        },
+        "struct_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "struct_path": null,
+        "struct_name": null
+      }
+    },
+    {
+      "name": "layout.struct.resize",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "struct_path": {
+          "type": "string"
+        },
+        "struct_name": {
+          "type": "string"
+        },
+        "length": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "length"
+      ],
+      "defaults": {
+        "struct_path": null,
+        "struct_name": null
+      }
+    },
+    {
+      "name": "layout.union.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "name"
+      ],
+      "defaults": {
+        "category": "/"
+      }
+    },
+    {
+      "name": "layout.union.member.add",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "union_path": {
+          "type": "string"
+        },
+        "union_name": {
+          "type": "string"
+        },
+        "field_name": {
+          "type": "string"
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "length": {
+          "type": "integer"
+        },
+        "comment": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "data_type"
+      ],
+      "defaults": {
+        "union_path": null,
+        "union_name": null,
+        "field_name": null,
+        "length": null,
+        "comment": null
+      }
+    },
+    {
+      "name": "layout.union.member.remove",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "union_path": {
+          "type": "string"
+        },
+        "union_name": {
+          "type": "string"
+        },
+        "ordinal": {
+          "type": "integer"
+        },
+        "field_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "union_path": null,
+        "union_name": null,
+        "ordinal": null,
+        "field_name": null
+      }
+    },
+    {
+      "name": "listing.clear",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "length": {
+          "type": "integer"
+        },
+        "clear_context": {
+          "type": "boolean"
+        },
+        "clear_symbols": {
+          "type": "boolean"
+        },
+        "clear_comments": {
+          "type": "boolean"
+        },
+        "clear_properties": {
+          "type": "boolean"
+        },
+        "clear_functions": {
+          "type": "boolean"
+        },
+        "clear_registers": {
+          "type": "boolean"
+        },
+        "clear_equates": {
+          "type": "boolean"
+        },
+        "clear_user_references": {
+          "type": "boolean"
+        },
+        "clear_analysis_references": {
+          "type": "boolean"
+        },
+        "clear_import_references": {
+          "type": "boolean"
+        },
+        "clear_default_references": {
+          "type": "boolean"
+        },
+        "clear_bookmarks": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "start"
+      ],
+      "defaults": {
+        "end": null,
+        "length": null,
+        "clear_context": false,
+        "clear_symbols": false,
+        "clear_comments": false,
+        "clear_properties": false,
+        "clear_functions": false,
+        "clear_registers": false,
+        "clear_equates": false,
+        "clear_user_references": false,
+        "clear_analysis_references": false,
+        "clear_import_references": false,
+        "clear_default_references": false,
+        "clear_bookmarks": false
+      }
+    },
+    {
+      "name": "listing.code_unit.after",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "listing.code_unit.at",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "listing.code_unit.before",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "listing.code_unit.containing",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "listing.code_units.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "forward": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "start": null,
+        "end": null,
+        "offset": 0,
+        "limit": 100,
+        "forward": true
+      }
+    },
+    {
+      "name": "listing.data.at",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "listing.data.clear",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "length": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {
+        "length": 1
+      }
+    },
+    {
+      "name": "listing.data.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "length": {
+          "type": "integer"
+        },
+        "clear_existing": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "address",
+        "data_type"
+      ],
+      "defaults": {
+        "length": null,
+        "clear_existing": true
+      }
+    },
+    {
+      "name": "listing.data.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "offset": 0,
+        "limit": 100
+      }
+    },
+    {
+      "name": "listing.disassemble.function",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {
+        "limit": 500
+      }
+    },
+    {
+      "name": "listing.disassemble.range",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "length": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "start",
+        "length"
+      ],
+      "defaults": {
+        "limit": 200
+      }
+    },
+    {
+      "name": "listing.disassemble.seed",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "clear_existing": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {
+        "limit": 128,
+        "clear_existing": false
+      }
+    },
+    {
+      "name": "memory.block.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "length": {
+          "type": "integer"
+        },
+        "initialized": {
+          "type": "boolean"
+        },
+        "fill": {
+          "type": "integer"
+        },
+        "read": {
+          "type": "boolean"
+        },
+        "write": {
+          "type": "boolean"
+        },
+        "execute": {
+          "type": "boolean"
+        },
+        "comment": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "name",
+        "address",
+        "length"
+      ],
+      "defaults": {
+        "initialized": true,
+        "fill": 0,
+        "read": true,
+        "write": false,
+        "execute": false,
+        "comment": null
+      }
+    },
+    {
+      "name": "memory.block.remove",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "name": null,
+        "address": null
+      }
+    },
+    {
+      "name": "memory.blocks.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "memory.read",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "length": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "address",
+        "length"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "memory.write",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "data_base64": {
+          "type": "string"
+        },
+        "data_hex": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {
+        "data_base64": null,
+        "data_hex": null
+      }
+    },
+    {
+      "name": "metadata.query",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "key": null,
+        "prefix": null,
+        "offset": 0,
+        "limit": 100
+      }
+    },
+    {
+      "name": "metadata.store",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "value": {}
+      },
+      "required": [
+        "session_id",
+        "key",
+        "value"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "namespace.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "parent": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "name"
+      ],
+      "defaults": {
+        "parent": null
+      }
+    },
+    {
+      "name": "parameter.add",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "ordinal": {
+          "type": "integer"
+        },
+        "stack_offset": {
+          "type": "integer"
+        },
+        "register": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name",
+        "data_type"
+      ],
+      "defaults": {
+        "ordinal": null,
+        "stack_offset": null,
+        "register": null
+      }
+    },
+    {
+      "name": "parameter.move",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "ordinal": {
+          "type": "integer"
+        },
+        "new_ordinal": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "ordinal",
+        "new_ordinal"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "parameter.remove",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "ordinal": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {
+        "ordinal": null,
+        "name": null
+      }
+    },
+    {
+      "name": "parameter.replace",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "ordinal": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "new_name": {
+          "type": "string"
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "stack_offset": {
+          "type": "integer"
+        },
+        "register": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {
+        "ordinal": null,
+        "name": null,
+        "new_name": null,
+        "data_type": null,
+        "stack_offset": null,
+        "register": null
+      }
+    },
+    {
+      "name": "patch.assemble",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "assembly": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "address",
+        "assembly"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "patch.branch_invert",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "patch.nop",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "count": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {
+        "count": 1
+      }
+    },
+    {
+      "name": "pcode.block",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "pcode.function",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {
+        "limit": 200
+      }
+    },
+    {
+      "name": "pcode.op.at",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "pcode.varnode_uses",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "varnode": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "space": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "timeout_secs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {
+        "varnode": null,
+        "address": null,
+        "space": null,
+        "size": null,
+        "timeout_secs": 30
+      }
+    },
+    {
+      "name": "program.close",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "program.export_binary",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "path"
+      ],
+      "defaults": {
+        "format": "original_file"
+      }
+    },
+    {
+      "name": "program.image_base.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "image_base": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "commit": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "image_base"
+      ],
+      "defaults": {
+        "commit": true
+      }
+    },
+    {
+      "name": "program.list_open",
+      "properties": {},
+      "required": [],
+      "defaults": {}
+    },
+    {
+      "name": "program.mode.get",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "program.mode.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "read_only": {
+          "type": "boolean"
+        },
+        "deterministic": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "read_only": null,
+        "deterministic": null
+      }
+    },
+    {
+      "name": "program.open",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "update_analysis": {
+          "type": "boolean"
+        },
+        "read_only": {
+          "type": "boolean"
+        },
+        "project_location": {
+          "type": "string"
+        },
+        "project_name": {
+          "type": "string"
+        },
+        "program_name": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "compiler": {
+          "type": "string"
+        },
+        "loader": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "defaults": {
+        "update_analysis": true,
+        "read_only": true,
+        "project_location": null,
+        "project_name": null,
+        "program_name": null,
+        "language": null,
+        "compiler": null,
+        "loader": null
+      }
+    },
+    {
+      "name": "program.open_bytes",
+      "properties": {
+        "data_base64": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "update_analysis": {
+          "type": "boolean"
+        },
+        "read_only": {
+          "type": "boolean"
+        },
+        "project_location": {
+          "type": "string"
+        },
+        "project_name": {
+          "type": "string"
+        },
+        "program_name": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "compiler": {
+          "type": "string"
+        },
+        "loader": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "data_base64"
+      ],
+      "defaults": {
+        "filename": "session.bin",
+        "update_analysis": true,
+        "read_only": true,
+        "project_location": null,
+        "project_name": null,
+        "program_name": null,
+        "language": null,
+        "compiler": null,
+        "loader": null
+      }
+    },
+    {
+      "name": "program.report",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "program.save",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "program.save_as",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "program_name": {
+          "type": "string"
+        },
+        "folder_path": {
+          "type": "string"
+        },
+        "overwrite": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "program_name"
+      ],
+      "defaults": {
+        "folder_path": "/",
+        "overwrite": true
+      }
+    },
+    {
+      "name": "program.summary",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "project.export",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "destination": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "destination"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "project.file.info",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "path"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "project.files.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "folder_path": {
+          "type": "string"
+        },
+        "recursive": {
+          "type": "boolean"
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "folder_path": "/",
+        "recursive": false,
+        "content_type": null,
+        "query": null,
+        "offset": 0,
+        "limit": 100
+      }
+    },
+    {
+      "name": "project.folders.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "folder_path": {
+          "type": "string"
+        },
+        "recursive": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "folder_path": "/",
+        "recursive": false
+      }
+    },
+    {
+      "name": "project.program.open",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "read_only": {
+          "type": "boolean"
+        },
+        "update_analysis": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "path"
+      ],
+      "defaults": {
+        "read_only": null,
+        "update_analysis": false
+      }
+    },
+    {
+      "name": "project.program.open_existing",
+      "properties": {
+        "project_location": {
+          "type": "string"
+        },
+        "project_name": {
+          "type": "string"
+        },
+        "program_path": {
+          "type": "string"
+        },
+        "folder_path": {
+          "type": "string"
+        },
+        "program_name": {
+          "type": "string"
+        },
+        "read_only": {
+          "type": "boolean"
+        },
+        "update_analysis": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "project_location",
+        "project_name"
+      ],
+      "defaults": {
+        "program_path": null,
+        "folder_path": "/",
+        "program_name": null,
+        "read_only": true,
+        "update_analysis": false
+      }
+    },
+    {
+      "name": "project.search.programs",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "content_type": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "query": null,
+        "content_type": null,
+        "offset": 0,
+        "limit": 100
+      }
+    },
+    {
+      "name": "reference.association.remove",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "from_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "to_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "operand_index": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "from_address",
+        "to_address"
+      ],
+      "defaults": {
+        "operand_index": 0
+      }
+    },
+    {
+      "name": "reference.association.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "from_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "to_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "operand_index": {
+          "type": "integer"
+        },
+        "symbol_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "symbol_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "from_address",
+        "to_address",
+        "symbol_address"
+      ],
+      "defaults": {
+        "operand_index": 0,
+        "symbol_name": null
+      }
+    },
+    {
+      "name": "reference.clear_from",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "from_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "from_address"
+      ],
+      "defaults": {
+        "end_address": null
+      }
+    },
+    {
+      "name": "reference.clear_to",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "to_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "to_address"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "reference.create.external",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "from_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "library_name": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "external_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "reference_type": {
+          "type": "string"
+        },
+        "operand_index": {
+          "type": "integer"
+        },
+        "source_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "from_address",
+        "library_name"
+      ],
+      "defaults": {
+        "label": null,
+        "external_address": null,
+        "reference_type": "DATA",
+        "operand_index": 0,
+        "source_type": "USER_DEFINED"
+      }
+    },
+    {
+      "name": "reference.create.memory",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "from_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "to_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "reference_type": {
+          "type": "string"
+        },
+        "operand_index": {
+          "type": "integer"
+        },
+        "source_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "from_address",
+        "to_address"
+      ],
+      "defaults": {
+        "reference_type": "DATA",
+        "operand_index": 0,
+        "source_type": "USER_DEFINED"
+      }
+    },
+    {
+      "name": "reference.create.register",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "from_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "register": {
+          "type": "string"
+        },
+        "reference_type": {
+          "type": "string"
+        },
+        "operand_index": {
+          "type": "integer"
+        },
+        "source_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "from_address",
+        "register"
+      ],
+      "defaults": {
+        "reference_type": "DATA",
+        "operand_index": 0,
+        "source_type": "USER_DEFINED"
+      }
+    },
+    {
+      "name": "reference.create.stack",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "from_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "stack_offset": {
+          "type": "integer"
+        },
+        "reference_type": {
+          "type": "string"
+        },
+        "operand_index": {
+          "type": "integer"
+        },
+        "source_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "from_address",
+        "stack_offset"
+      ],
+      "defaults": {
+        "reference_type": "DATA",
+        "operand_index": 0,
+        "source_type": "USER_DEFINED"
+      }
+    },
+    {
+      "name": "reference.delete",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "from_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "to_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "operand_index": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "from_address"
+      ],
+      "defaults": {
+        "to_address": null,
+        "operand_index": null
+      }
+    },
+    {
+      "name": "reference.from",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "address": null,
+        "start": null,
+        "end": null,
+        "limit": 100
+      }
+    },
+    {
+      "name": "reference.primary.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "from_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "to_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "operand_index": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "from_address",
+        "to_address"
+      ],
+      "defaults": {
+        "operand_index": 0
+      }
+    },
+    {
+      "name": "reference.to",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "address": null,
+        "start": null,
+        "end": null,
+        "limit": 100
+      }
+    },
+    {
+      "name": "relocation.add",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "type": {
+          "type": "integer"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "byte_length": {
+          "type": "integer"
+        },
+        "symbol_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {
+        "status": "APPLIED",
+        "type": 0,
+        "values": null,
+        "byte_length": 0,
+        "symbol_name": null
+      }
+    },
+    {
+      "name": "relocation.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "start": null,
+        "end": null
+      }
+    },
+    {
+      "name": "search.bytes",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "pattern_base64": {
+          "type": "string"
+        },
+        "pattern_hex": {
+          "type": "string"
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "pattern_base64": null,
+        "pattern_hex": null,
+        "start": null,
+        "end": null,
+        "limit": 100
+      }
+    },
+    {
+      "name": "search.constants",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "value": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "value"
+      ],
+      "defaults": {
+        "start": null,
+        "end": null,
+        "limit": 100
+      }
+    },
+    {
+      "name": "search.defined_strings",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "offset": 0,
+        "limit": 100,
+        "query": null
+      }
+    },
+    {
+      "name": "search.instructions",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "case_sensitive": {
+          "type": "boolean"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "query"
+      ],
+      "defaults": {
+        "case_sensitive": false,
+        "function_start": null,
+        "start": null,
+        "end": null,
+        "limit": 100
+      }
+    },
+    {
+      "name": "search.pcode",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "case_sensitive": {
+          "type": "boolean"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "query"
+      ],
+      "defaults": {
+        "case_sensitive": false,
+        "function_start": null,
+        "start": null,
+        "end": null,
+        "limit": 100
+      }
+    },
+    {
+      "name": "search.resolve",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "query": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "query"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "search.text",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "case_sensitive": {
+          "type": "boolean"
+        },
+        "defined_strings_only": {
+          "type": "boolean"
+        },
+        "encoding": {
+          "type": "string"
+        },
+        "start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "end": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "limit": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "text"
+      ],
+      "defaults": {
+        "case_sensitive": false,
+        "defined_strings_only": false,
+        "encoding": "utf-8",
+        "start": null,
+        "end": null,
+        "limit": 100
+      }
+    },
+    {
+      "name": "source.file.add",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "id_type": {
+          "type": "string"
+        },
+        "identifier_hex": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "path"
+      ],
+      "defaults": {
+        "id_type": null,
+        "identifier_hex": null
+      }
+    },
+    {
+      "name": "source.file.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "source.file.remove",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "path"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "source.map.add",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "line_number": {
+          "type": "integer"
+        },
+        "base_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "length": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "path",
+        "line_number",
+        "base_address",
+        "length"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "source.map.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "min_line": {
+          "type": "integer"
+        },
+        "max_line": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "address": null,
+        "path": null,
+        "min_line": null,
+        "max_line": null
+      }
+    },
+    {
+      "name": "source.map.remove",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "line_number": {
+          "type": "integer"
+        },
+        "base_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "path",
+        "line_number",
+        "base_address"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "stackframe.variable.clear",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "stack_offset": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "stack_offset"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "stackframe.variable.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "stack_offset": {
+          "type": "integer"
+        },
+        "data_type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name",
+        "stack_offset",
+        "data_type"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "stackframe.variables",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "symbol.by_name",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "exact": {
+          "type": "boolean"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "include_dynamic": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "name"
+      ],
+      "defaults": {
+        "exact": false,
+        "limit": 20,
+        "include_dynamic": true
+      }
+    },
+    {
+      "name": "symbol.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "make_primary": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "address",
+        "name"
+      ],
+      "defaults": {
+        "make_primary": true
+      }
+    },
+    {
+      "name": "symbol.delete",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {
+        "name": null
+      }
+    },
+    {
+      "name": "symbol.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "include_dynamic": {
+          "type": "boolean"
+        },
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "offset": 0,
+        "limit": 100,
+        "include_dynamic": false,
+        "query": null
+      }
+    },
+    {
+      "name": "symbol.namespace.move",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "address",
+        "namespace"
+      ],
+      "defaults": {
+        "name": null
+      }
+    },
+    {
+      "name": "symbol.primary.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "address"
+      ],
+      "defaults": {
+        "name": null
+      }
+    },
+    {
+      "name": "symbol.rename",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "new_name": {
+          "type": "string"
+        },
+        "old_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "address",
+        "new_name"
+      ],
+      "defaults": {
+        "old_name": null
+      }
+    },
+    {
+      "name": "tag.add",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "comment": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name"
+      ],
+      "defaults": {
+        "comment": ""
+      }
+    },
+    {
+      "name": "tag.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "function_start": null
+      }
+    },
+    {
+      "name": "tag.remove",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "tag.stats",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "task.analysis_update",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "task.cancel",
+      "properties": {
+        "task_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "task.result",
+      "properties": {
+        "task_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "task.status",
+      "properties": {
+        "task_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "transaction.begin",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "description": "MCP Transaction"
+      }
+    },
+    {
+      "name": "transaction.commit",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "transaction.redo",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "transaction.revert",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "transaction.status",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "transaction.undo",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "type.apply_at",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "length": {
+          "type": "integer"
+        },
+        "clear_existing": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "address",
+        "data_type"
+      ],
+      "defaults": {
+        "length": null,
+        "clear_existing": true
+      }
+    },
+    {
+      "name": "type.archives.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "type.category.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "path"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "type.category.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "recursive": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "path": "/",
+        "recursive": false
+      }
+    },
+    {
+      "name": "type.define_c",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "declaration": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "declaration"
+      ],
+      "defaults": {
+        "name": null,
+        "category": "/"
+      }
+    },
+    {
+      "name": "type.delete",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "path": null,
+        "name": null
+      }
+    },
+    {
+      "name": "type.get",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "path": null,
+        "name": null
+      }
+    },
+    {
+      "name": "type.get_by_id",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "data_type_id": {
+          "type": "integer"
+        },
+        "universal_id": {
+          "type": "integer"
+        },
+        "source_archive_id": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "data_type_id": null,
+        "universal_id": null,
+        "source_archive_id": null
+      }
+    },
+    {
+      "name": "type.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer"
+        },
+        "limit": {
+          "type": "integer"
+        },
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {
+        "offset": 0,
+        "limit": 100,
+        "query": null
+      }
+    },
+    {
+      "name": "type.parse_c",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "declaration": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "declaration"
+      ],
+      "defaults": {
+        "name": null,
+        "category": "/"
+      }
+    },
+    {
+      "name": "type.rename",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "new_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "new_name"
+      ],
+      "defaults": {
+        "path": null,
+        "name": null
+      }
+    },
+    {
+      "name": "type.source_archives.list",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "defaults": {}
+    },
+    {
+      "name": "variable.comment.set",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "comment": {
+          "type": "string"
+        },
+        "ordinal": {
+          "type": "integer"
+        },
+        "storage": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name",
+        "comment"
+      ],
+      "defaults": {
+        "ordinal": null,
+        "storage": null
+      }
+    },
+    {
+      "name": "variable.local.create",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "first_use_offset": {
+          "type": "integer"
+        },
+        "stack_offset": {
+          "type": "integer"
+        },
+        "register": {
+          "type": "string"
+        },
+        "storage_address": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "comment": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name",
+        "data_type"
+      ],
+      "defaults": {
+        "first_use_offset": 0,
+        "stack_offset": null,
+        "register": null,
+        "storage_address": null,
+        "comment": null
+      }
+    },
+    {
+      "name": "variable.local.remove",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "storage": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name"
+      ],
+      "defaults": {
+        "storage": null
+      }
+    },
+    {
+      "name": "variable.rename",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "new_name": {
+          "type": "string"
+        },
+        "ordinal": {
+          "type": "integer"
+        },
+        "storage": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name",
+        "new_name"
+      ],
+      "defaults": {
+        "ordinal": null,
+        "storage": null
+      }
+    },
+    {
+      "name": "variable.retype",
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "function_start": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "ordinal": {
+          "type": "integer"
+        },
+        "storage": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "function_start",
+        "name",
+        "data_type"
+      ],
+      "defaults": {
+        "ordinal": null,
+        "storage": null
+      }
+    }
+  ]
+}

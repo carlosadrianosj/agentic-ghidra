@@ -30,6 +30,7 @@ from pyghidra_mcp.models import (
     StringSearchResult,
     SymbolInfo,
 )
+from pyghidra_mcp.telemetry import measure
 
 _REGEX_META = re.compile(r"[\\^$.|?*+(){}\[\]]")
 
@@ -280,6 +281,7 @@ class GhidraTools:
             raise ValueError(f"Symbol '{name_or_address}' not found.")
 
     @handle_exceptions
+    @measure("decompile")
     def decompile_function_by_name_or_addr(
         self, name_or_address: str, timeout: int = DEFAULT_DECOMPILE_TIMEOUT_SECONDS
     ) -> DecompiledFunction:
