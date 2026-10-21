@@ -500,15 +500,39 @@ def update_global(call, function_start, name, storage, timeout_secs, new_name=No
         )
         before = high_symbol_dict(symbol)
         value = None if data_type is None else datatype(call, data_type)
+        original_type = symbol.getDataType()
         HighFunctionDBUtil.updateDBVariable(symbol, new_name, value, source_type())
+    if data_type is not None:
+        # A type the decompiler cannot reconcile with the code (for example a
+        # locked one-byte char under a wider access) silently removes the symbol
+        # from every later decompilation. Verify mappability and restore on
+        # conflict so the program is never left in that unreachable state.
+        target = new_name or name
+        with decompile(call, function_start, timeout_secs) as (_, verify):
+            try:
+                select_high_symbol(
+                    verify.getHighFunction(), target, storage=None, global_only=True
+                )
+            except ValueError:
+                HighFunctionDBUtil.updateDBVariable(symbol, name, original_type, source_type())
+                raise ValueError(
+                    f"Retyping {name} to {data_type} makes the symbol unmappable in the "
+                    f"decompilation; original type {original_type} was restored"
+                ) from None
+    with decompile(call, function_start, timeout_secs) as (_, result):
+        symbol = select_high_symbol(
+            result.getHighFunction(),
+            new_name or name,
+            storage=None,
+            global_only=True,
+        )
         location = symbol.getStorage().getFirstVarnode().getAddress()
-        db_symbol = call.program.getSymbolTable().getPrimarySymbol(location)
-        db_data = call.program.getListing().getDataAt(location)
         return {
             "before": before,
             "address": str(location),
-            "name": None if db_symbol is None else str(db_symbol.getName()),
-            "data_type": None if db_data is None else str(db_data.getDataType()),
+            "name": str(symbol.getName()),
+            "data_type": str(symbol.getDataType()),
+            "storage": str(symbol.getStorage()),
         }
 
 
