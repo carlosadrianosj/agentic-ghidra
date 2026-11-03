@@ -80,7 +80,7 @@ class _OwnedServer(Server):
     """Release upstream ownership when the downstream MCP transport finishes."""
 
     def __init__(self, runtime: SupervisorRuntime):
-        super().__init__("ghidra-advanced-mcp", version=__version__)
+        super().__init__("agentic-ghidra", version=__version__)
         self.runtime = runtime
 
     async def run(self, *args, **kwargs) -> None:

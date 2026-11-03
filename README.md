@@ -46,7 +46,7 @@ Start the supervisor once, then drive it from either side:
 ```bash
 uv sync
 GHIDRA_INSTALL_DIR=/path/to/ghidra \
-  .venv/bin/ghidra-advanced-mcp --project-path runtime/projects --port 8766
+  .venv/bin/agentic-ghidra --project-path runtime/projects --port 8766
 ```
 
 ### Via MCP
@@ -79,43 +79,66 @@ curl -s -XPOST localhost:29950/api/v1/tools/decomp.function \
 
 | Endpoint | Purpose |
 | --- | --- |
-| `GET /health` | liveness plus worker snapshot |
-| `GET /api/v1/tools` | catalog with input schemas; filters `family`, `q`, `read_only` |
-| `GET/POST /api/v1/tools/{name}` | schema / invoke any tool |
-| `POST /api/v1/batch` | sequential calls; `pipeline: true` merges each result into the next arguments |
-| `GET /api/v1/workers`, `POST /api/v1/workers/{id}/{start,stop,restart}` | worker lifecycle |
-| `GET/POST /api/v1/investigations`, `GET /api/v1/investigations/{id}` | team investigations |
-| `GET /api/v1/openapi.json` | machine readable route list |
+| `GET /health` | Liveness plus worker snapshot |
+| `GET /api/v1/tools` | Tool catalog with input schemas |
+| `GET /api/v1/tools/{name}` | Input schema of one tool |
+| `POST /api/v1/tools/{name}` | Invoke any tool by name |
+| `POST /api/v1/batch` | Sequential calls; `pipeline: true` feeds each result into the next call |
+| `GET /api/v1/workers` | Worker snapshot |
+| `POST /api/v1/workers/{id}/start` | Start a worker |
+| `POST /api/v1/workers/{id}/stop` | Stop a worker |
+| `POST /api/v1/workers/{id}/restart` | Restart a worker |
+| `GET /api/v1/investigations` | List team investigations |
+| `POST /api/v1/investigations` | Create a team investigation |
+| `GET /api/v1/investigations/{id}` | One investigation in detail |
+| `GET /api/v1/openapi.json` | Machine readable route list |
 
-Success envelope: `{"status":"ok","tool":...,"duration_ms":...,"session_id":...,"result":...}`.
-Errors map to HTTP by exception kind: `ValueError`→400, `FileNotFoundError`→404,
-`PermissionError`→403, `TimeoutError`→504, unknown tool→404.
+`GET /api/v1/tools` filters by `family`, `q` and `read_only`.
 
-**Auth**: dev mode (default, loopback) shares one `rest-local` owner. Pass
-`--rest-api-key <sha256-hex>` (or `GHIDRA_ADVANCED_REST_API_KEY`) to require
-`Authorization: Bearer <token>` / `X-API-Key` on `/api/v1/*`; each key is its own owner for
-session isolation.
+Every success returns the same envelope:
+
+```json
+{"status":"ok","tool":...,"duration_ms":...,"session_id":...,"result":...}
+```
+
+Errors map to HTTP by exception kind:
+
+| Exception | HTTP |
+| --- | --- |
+| `ValueError` | 400 |
+| `FileNotFoundError` | 404 |
+| `PermissionError` | 403 |
+| `TimeoutError` | 504 |
+| unknown tool | 404 |
+
+**Auth.** Dev mode (default, loopback) shares one `rest-local` owner. To lock `/api/v1/*` down,
+pass `--rest-api-key <sha256-hex>` or set `GHIDRA_ADVANCED_REST_API_KEY`; clients then send
+`Authorization: Bearer <token>` or `X-API-Key`. Each key is its own owner, so sessions stay
+isolated per key.
 
 ### What is included
 
-- **Advanced catalog**: 212 operations across 34 families (`analysis`, `decomp`, `function`,
-  `listing`, `memory`, `pcode`, `patch`, `symbol`, `reference`, `type`, `transaction`, …) plus the
-  20 legacy headless tools. Source names are preserved as aliases; an alias is never counted as a
-  new capability. The pinned equivalence matrix lives in
-  `src/pyghidra_mcp/advanced/reference_catalog.json`; run `python tools/check_catalog.py`
-  locally to fail when `source_names - implemented_or_mapped != ∅`.
-- **Sessions and transactions**: every operation is session bound with explicit read/write modes,
-  locks per program, undo/redo, revert, and decompiler/index cache invalidation after mutations.
-- **Local worker supervisor** (`ghidra-advanced-mcp` CLI): JVM workers on demand with isolated
-  projects, ports, and Chroma indexes; task queue with safe cancellation and restart.
-- **Investigations** (`investigation.create`): two or more teams analyzing the same binary
-  (common SHA-256) with fully isolated projects, indexes, ports, and mutations.
-- **REST API beside MCP**: the supervisor serves `/mcp` and `/api/v1/*` on the same port. One
-  registry, two protocols; chain calls from plain Python or curl for custom RE pipelines.
-- **Trusted code policy**: `ghidra.call`, `ghidra.eval`, and `ghidra.script` require
-  `--advanced-trusted-code` (default off). They are session bound, time limited, and logged with
-  owner/session/write flags. They execute arbitrary code: enable only for trusted local clients.
-  The transports have no authentication; do not expose them to untrusted networks.
+| Capability | What you get |
+| --- | --- |
+| Advanced catalog | 212 operations in 34 families plus the 20 legacy headless tools |
+| Sessions and transactions | Explicit read/write modes, locks per program, undo/redo and revert |
+| Worker supervisor | JVM workers on demand with isolated projects, ports and Chroma indexes |
+| Investigations | Two or more teams on the same binary (common SHA-256), fully isolated |
+| REST beside MCP | One registry, two protocols; chain calls from Python or curl |
+| Trusted code policy | `ghidra.call`, `ghidra.eval` and `ghidra.script` stay off unless enabled |
+
+Catalog integrity: source names from the legacy tools are preserved as aliases and never counted
+as new capabilities. The equivalence matrix is pinned in
+`src/pyghidra_mcp/advanced/reference_catalog.json`, and `python tools/check_catalog.py` fails
+when `source_names - implemented_or_mapped != ∅`.
+
+Every operation is session bound, and mutations invalidate the decompiler and index caches, so
+the next read always sees current program state.
+
+The three trusted code tools execute arbitrary code. With `--advanced-trusted-code` they are
+session bound, time limited and logged with owner, session and write flags. Enable them only
+for trusted local clients: the transports have no authentication, so never expose them to
+untrusted networks.
 
 ### Verification
 
@@ -124,13 +147,13 @@ under `runtime/acceptance/` when generated locally.
 
 | Scope | Result |
 | --- | --- |
-| 212 advanced + 20 legacy operations, native Mach-O ARM64 | all pass (`native-all-evidence.json`) |
-| 212 operations, ELF aarch64 / arm / x86_64 | all pass (`elf-all-evidence.json`) |
-| Annotations incl. branch inversion + reopen persistence, 4 architectures | 32/32 each (`annotations-*.json`) |
-| Supervisor, 3 concurrent MCP clients, isolation, semantic index rebuild | pass (`mcp-evidence.json`, 239 tools) |
-| Same binary teams (tls/raw), isolated mutations, restart survival | pass (`investigations-evidence.json`) |
-| REST pipeline over real worker (open, decompile, close) | pass (`rest-smoke.json`) |
-| Unit suite (incl. REST contract tests) | 262 passed, 1 skipped |
+| 212 advanced + 20 legacy ops, native Mach-O ARM64 | all pass (`native-all-evidence.json`) |
+| 212 ops, ELF aarch64 / arm / x86_64 | all pass (`elf-all-evidence.json`) |
+| Annotations, branch inversion and reopen, 4 architectures | 32/32 each (`annotations-*.json`) |
+| Supervisor, 3 concurrent MCP clients, index rebuild | pass (`mcp-evidence.json`, 239 tools) |
+| Same binary teams, isolated mutations, restart survival | pass (`investigations-evidence.json`) |
+| REST pipeline over a real worker | pass (`rest-smoke.json`) |
+| Unit suite with REST contract tests | 271 passed, 43 skipped without a local Ghidra |
 
 Regenerate with:
 
@@ -170,7 +193,7 @@ fork，原项目提供二十个无头工具，用于让 MCP 客户端接入 Ghid
 ### 一图看懂怎么用
 
 <p align="center">
-  <img src="icon/agentic-ghidra-flow.svg" alt="MCP 与 REST 客户端驱动 supervisor，后者按 worker_id 把每次调用路由到隔离的 JVM 工作进程" width="760"/>
+  <img src="icon/agentic-ghidra-flow.zh.svg" alt="MCP 与 REST 客户端驱动 supervisor，后者按 worker_id 把每次调用路由到隔离的 JVM 工作进程" width="760"/>
 </p>
 
 先启动一次 supervisor，然后从任意一侧驱动它：
@@ -178,7 +201,7 @@ fork，原项目提供二十个无头工具，用于让 MCP 客户端接入 Ghid
 ```bash
 uv sync
 GHIDRA_INSTALL_DIR=/path/to/ghidra \
-  .venv/bin/ghidra-advanced-mcp --project-path runtime/projects --port 8766
+  .venv/bin/agentic-ghidra --project-path runtime/projects --port 8766
 ```
 
 ### 通过 MCP 使用
@@ -211,41 +234,61 @@ curl -s -XPOST localhost:29950/api/v1/tools/decomp.function \
 | 端点 | 用途 |
 | --- | --- |
 | `GET /health` | 存活状态与工作进程快照 |
-| `GET /api/v1/tools` | 带输入 schema 的工具目录；支持 `family`、`q`、`read_only` 过滤 |
-| `GET/POST /api/v1/tools/{name}` | 查看 schema / 调用任意工具 |
-| `POST /api/v1/batch` | 顺序调用；`pipeline: true` 会把每次结果合并进下一次调用参数 |
-| `GET /api/v1/workers`，`POST /api/v1/workers/{id}/{start,stop,restart}` | 工作进程生命周期 |
-| `GET/POST /api/v1/investigations`，`GET /api/v1/investigations/{id}` | 多团队调查 |
+| `GET /api/v1/tools` | 带输入 schema 的工具目录 |
+| `GET /api/v1/tools/{name}` | 单个工具的输入 schema |
+| `POST /api/v1/tools/{name}` | 按名称调用任意工具 |
+| `POST /api/v1/batch` | 顺序调用；`pipeline: true` 会把每次结果喂给下一次调用 |
+| `GET /api/v1/workers` | 工作进程快照 |
+| `POST /api/v1/workers/{id}/start` | 启动工作进程 |
+| `POST /api/v1/workers/{id}/stop` | 停止工作进程 |
+| `POST /api/v1/workers/{id}/restart` | 重启工作进程 |
+| `GET /api/v1/investigations` | 列出多团队调查 |
+| `POST /api/v1/investigations` | 创建多团队调查 |
+| `GET /api/v1/investigations/{id}` | 单个调查详情 |
 | `GET /api/v1/openapi.json` | 机器可读的路由列表 |
 
-成功响应统一封装为 `{"status":"ok","tool":...,"duration_ms":...,"session_id":...,"result":...}`。
-错误按异常类型映射为 HTTP 状态：`ValueError`→400、`FileNotFoundError`→404、
-`PermissionError`→403、`TimeoutError`→504、未知工具→404。
+`GET /api/v1/tools` 支持 `family`、`q`、`read_only` 过滤。
 
-**鉴权**：开发模式（默认，回环地址）共用一个 `rest-local` 所有者。传入
-`--rest-api-key <sha256-hex>`（或环境变量 `GHIDRA_ADVANCED_REST_API_KEY`）后，
-`/api/v1/*` 要求 `Authorization: Bearer <token>` 或 `X-API-Key`；每个 key 都是其独立的
-所有者，用于会话隔离。
+每次成功都返回同样的封装：
+
+```json
+{"status":"ok","tool":...,"duration_ms":...,"session_id":...,"result":...}
+```
+
+错误按异常类型映射为 HTTP 状态：
+
+| 异常 | HTTP |
+| --- | --- |
+| `ValueError` | 400 |
+| `FileNotFoundError` | 404 |
+| `PermissionError` | 403 |
+| `TimeoutError` | 504 |
+| 未知工具 | 404 |
+
+**鉴权**：开发模式（默认，回环地址）共用一个 `rest-local` 所有者。要给 `/api/v1/*` 上锁，
+传入 `--rest-api-key <sha256-hex>` 或设置 `GHIDRA_ADVANCED_REST_API_KEY`；客户端随后发送
+`Authorization: Bearer <token>` 或 `X-API-Key`。每个 key 都有独立的所有者，会话按 key 隔离。
 
 ### 包含内容
 
-- **高级操作目录**：34 个族共 212 项操作（`analysis`、`decomp`、`function`、`listing`、
-  `memory`、`pcode`、`patch`、`symbol`、`reference`、`type`、`transaction` 等），外加 20 个
-  遗留无头工具。源名称保留为别名；别名不会被计入新能力。固定的等价矩阵位于
-  `src/pyghidra_mcp/advanced/reference_catalog.json`；本地运行 `python tools/check_catalog.py`，
-  当 `source_names - implemented_or_mapped != ∅` 时直接失败。
-- **会话与事务**：每个操作都绑定会话，带显式读写模式、按程序加锁、undo/redo、revert，
-  以及变更后对反编译器和索引缓存的失效处理。
-- **本地工作进程 supervisor**（`ghidra-advanced-mcp` CLI）：按需启动 JVM 工作进程，
-  项目、端口与 Chroma 索引彼此隔离；任务队列支持安全取消与重启。
-- **多团队调查**（`investigation.create`）：两个或更多团队分析同一个二进制（相同
-  SHA-256），项目、索引、端口与变更完全隔离。
-- **与 MCP 并列的 REST API**：supervisor 在同一端口提供 `/mcp` 与 `/api/v1/*`。一份注册表，
-  两种协议；用纯 Python 或 curl 串联调用，构建自定义逆向流水线。
-- **可信代码策略**：`ghidra.call`、`ghidra.eval` 与 `ghidra.script` 需要
-  `--advanced-trusted-code`（默认关闭）。它们绑定会话、限时执行，并以 owner、session、
-  write 标志记录日志。它们会执行任意代码：仅对可信的本地客户端开启。传输层没有鉴权，
-  不要暴露给不受信任的网络。
+| 能力 | 你得到什么 |
+| --- | --- |
+| 高级操作目录 | 34 个族共 212 项操作，外加 20 个遗留无头工具 |
+| 会话与事务 | 显式读写模式、按程序加锁、undo/redo 与 revert |
+| 工作进程 supervisor | 按需启动 JVM 工作进程，项目、端口与 Chroma 索引彼此隔离 |
+| 多团队调查 | 两个或更多团队分析同一二进制（相同 SHA-256），完全隔离 |
+| 与 MCP 并列的 REST | 一份注册表，两种协议；用 Python 或 curl 串联调用 |
+| 可信代码策略 | `ghidra.call`、`ghidra.eval`、`ghidra.script` 默认关闭，需显式开启 |
+
+目录完整性：遗留工具的源名称保留为别名，且绝不计入新能力。等价矩阵固定在
+`src/pyghidra_mcp/advanced/reference_catalog.json`；当
+`source_names - implemented_or_mapped != ∅` 时，`python tools/check_catalog.py` 直接失败。
+
+每个操作都绑定会话；变更会使反编译器与索引缓存失效，下一次读取总能看到最新的程序状态。
+
+三个可信代码工具会执行任意代码。开启 `--advanced-trusted-code` 后，它们绑定会话、限时执行，
+并以 owner、session、write 标志记录日志。仅对可信的本地客户端开启：传输层没有鉴权，
+绝不要暴露给不受信任的网络。
 
 ### 验证
 
@@ -256,11 +299,11 @@ curl -s -XPOST localhost:29950/api/v1/tools/decomp.function \
 | --- | --- |
 | 212 项高级 + 20 项遗留操作，原生 Mach-O ARM64 | 全部通过（`native-all-evidence.json`） |
 | 212 项操作，ELF aarch64 / arm / x86_64 | 全部通过（`elf-all-evidence.json`） |
-| 注解（含分支反转与重开持久化），4 种架构 | 每架构 32/32（`annotations-*.json`） |
-| supervisor、3 个并发 MCP 客户端、隔离、语义索引重建 | 通过（`mcp-evidence.json`，239 个工具） |
-| 同一二进制多团队（tls/raw）、变更隔离、重启存活 | 通过（`investigations-evidence.json`） |
-| 真实工作进程上的 REST 流水线（打开、反编译、关闭） | 通过（`rest-smoke.json`） |
-| 单元套件（含 REST 契约测试） | 262 通过，1 跳过 |
+| 注解、分支反转与重开持久化，4 种架构 | 每架构 32/32（`annotations-*.json`） |
+| supervisor、3 个并发 MCP 客户端、索引重建 | 通过（`mcp-evidence.json`，239 个工具） |
+| 同一二进制多团队、变更隔离、重启存活 | 通过（`investigations-evidence.json`） |
+| 真实工作进程上的 REST 流水线 | 通过（`rest-smoke.json`） |
+| 含 REST 契约测试的单元套件 | 本地 271 通过，43 跳过（无本地 Ghidra 时） |
 
 重新生成：
 

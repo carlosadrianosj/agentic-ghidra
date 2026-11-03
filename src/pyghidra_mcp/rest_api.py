@@ -416,7 +416,7 @@ class RestApi:
             {
                 "openapi": "3.1.0",
                 "info": {
-                    "title": "ghidra-advanced-mcp REST",
+                    "title": "agentic-ghidra REST",
                     "version": "1",
                     "description": (
                         "Same registry as the MCP server on /mcp. Invoke any tool by "

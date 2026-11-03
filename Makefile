@@ -40,7 +40,7 @@ install-dev:
 
 # Run isolated Ghidra workers behind one MCP endpoint
 run:
-	uv run ghidra-advanced-mcp --config "$(WORKER_CONFIG)"
+	uv run agentic-ghidra --config "$(WORKER_CONFIG)"
 
 run-direct:
 	uv run pyghidra-mcp --transport streamable-http
