@@ -56,10 +56,12 @@ Release history: [CHANGELOG.md](CHANGELOG.md).
 Start the supervisor once, then drive it from either side:
 
 ```bash
-uv sync
-GHIDRA_INSTALL_DIR=/path/to/ghidra \
-  .venv/bin/agentic-ghidra --project-path runtime/projects --port 8766
+./run.sh
 ```
+
+The script detects Ghidra (or use `GHIDRA_INSTALL_DIR`), runs `uv sync`, writes a default
+worker config at `runtime/supervisor.json` on first use, and starts the supervisor on port
+29840 (`PORT=...` to change). Pass `--config workers.json` for a custom worker layout.
 
 ### Via MCP
 
@@ -71,7 +73,7 @@ decompiler pool size).
 ```json
 {
   "mcpServers": {
-    "ghidra": { "url": "http://127.0.0.1:8766/mcp" }
+    "ghidra": { "url": "http://127.0.0.1:29840/mcp" }
   }
 }
 ```
@@ -223,10 +225,10 @@ fork，原项目提供二十个无头工具，用于让 MCP 客户端接入 Ghid
 先启动一次 supervisor，然后从任意一侧驱动它：
 
 ```bash
-uv sync
-GHIDRA_INSTALL_DIR=/path/to/ghidra \
-  .venv/bin/agentic-ghidra --project-path runtime/projects --port 8766
+./run.sh
 ```
+
+脚本会自动检测 Ghidra（也可以用 `GHIDRA_INSTALL_DIR` 指定）、执行 `uv sync`、在首次运行时生成默认的 worker 配置 `runtime/supervisor.json`，并在端口 29840 启动 supervisor（用 `PORT=...` 修改）。需要自定义 worker 布局时传入 `--config workers.json`。
 
 ### 通过 MCP 使用
 
@@ -237,7 +239,7 @@ GHIDRA_INSTALL_DIR=/path/to/ghidra \
 ```json
 {
   "mcpServers": {
-    "ghidra": { "url": "http://127.0.0.1:8766/mcp" }
+    "ghidra": { "url": "http://127.0.0.1:29840/mcp" }
   }
 }
 ```
