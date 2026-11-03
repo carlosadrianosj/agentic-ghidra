@@ -121,9 +121,9 @@ ignore = ["F821", "E402"]
 [tool.ruff.lint.per-file-ignores]
 # JPype Java-interface stubs must keep their camelCase method names.
 "tests/unit/test_advanced_runtime.py" = ["N802"]
-# tests/api_scripts holds standalone, rerunnable acceptance drivers against a
+# tests/acceptance holds standalone, rerunnable acceptance drivers against a
 # live supervisor; linear scripts and long JSON literals are accepted there.
-"tests/api_scripts/**" = ["E501", "C901", "RUF059", "RUF100", "B007", "B905", "UP031", "F841"]
+"tests/acceptance/**" = ["E501", "C901", "RUF059", "RUF100", "B007", "B905", "UP031", "F841"]
 
 
 [tool.ruff.lint.isort]
@@ -135,6 +135,11 @@ split-on-trailing-comma = true
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
+
+[tool.pytest.ini_options]
+# Acceptance suites under tests/acceptance are standalone scripts against a
+# live supervisor; the automated pytest run covers unit and integration only.
+testpaths = ["tests/unit", "tests/integration"]
 
 [tool.pyright]
 reportMissingModuleSource = false

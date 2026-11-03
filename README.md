@@ -37,22 +37,11 @@ ARM64.
 
 ### How to use it (one picture)
 
-```mermaid
-flowchart LR
-    A["<b>MCP client</b><br/>Claude Code, Cursor, any MCP app"]
-    B["<b>REST client</b><br/>curl, Python, batch pipelines"]
-    C["<b>Acceptance scripts</b><br/>tests/api_scripts"]
-    R["<b>Supervisor</b><br/>ghidra-advanced-mcp<br/>one registry, 239 tools<br/>MCP at /mcp and REST at /api/v1"]
-    W1["Worker JVM<br/>own project, port, index"]
-    W2["Worker JVM<br/>own project, port, index"]
-    A -- MCP --> R
-    B -- HTTP --> R
-    C -- HTTP --> R
-    R -- "routes by worker_id" --> W1
-    R --> W2
-```
+<p align="center">
+  <img src="icon/agentic-ghidra-flow.svg" alt="MCP and REST clients drive the supervisor, which routes each call by worker_id to an isolated worker JVM" width="760"/>
+</p>
 
-Start the supervisor once, then drive it from any of the three sides:
+Start the supervisor once, then drive it from either side:
 
 ```bash
 uv sync
@@ -106,25 +95,6 @@ Errors map to HTTP by exception kind: `ValueError`→400, `FileNotFoundError`→
 `--rest-api-key <sha256-hex>` (or `GHIDRA_ADVANCED_REST_API_KEY`) to require
 `Authorization: Bearer <token>` / `X-API-Key` on `/api/v1/*`; each key is its own owner for
 session isolation.
-
-### Via scripts
-
-[`tests/api_scripts/`](tests/api_scripts) holds standalone, rerunnable acceptance drivers against a
-live supervisor. Every suite shares one HTTP code path, `rest_client.py`, and writes evidence JSON
-under `runtime/acceptance/api/`:
-
-| Suite | Covers |
-| --- | --- |
-| `ApiInfra` | health, mcp, program, project, task, analysis, transaction, memory and listing families, one real binary per run |
-| `ApiDecompFlow2` | decomp, pcode, graph, search, reference and annotation families; writes live inside transaction begin to revert, plus expected rejection probes |
-| `ApiPatchLoad` | every patch op plus the gated ghidra family; mixed, concurrent and batch load soak across two workers |
-| `ApiReconstruction2` | 84 reconstruction ops: function, variable, parameter, stackframe, type, layout, symbol, namespace, class, external, equate |
-
-```bash
-python tests/api_scripts/ApiInfra/test_infra.py \
-  --base http://127.0.0.1:29950 --worker api_infra \
-  --binary /path/to/binary --label mybin
-```
 
 ### What is included
 
@@ -199,20 +169,9 @@ fork，原项目提供二十个无头工具，用于让 MCP 客户端接入 Ghid
 
 ### 一图看懂怎么用
 
-```mermaid
-flowchart LR
-    A["<b>MCP 客户端</b><br/>Claude Code、Cursor 等任何 MCP 应用"]
-    B["<b>REST 客户端</b><br/>curl、Python、批量流水线"]
-    C["<b>验收脚本</b><br/>tests/api_scripts"]
-    R["<b>supervisor 主控进程</b><br/>ghidra-advanced-mcp<br/>同一注册表，239 个工具<br/>MCP 在 /mcp，REST 在 /api/v1"]
-    W1["工作进程 JVM<br/>独立项目、端口与索引"]
-    W2["工作进程 JVM<br/>独立项目、端口与索引"]
-    A -- MCP --> R
-    B -- HTTP --> R
-    C -- HTTP --> R
-    R -- "按 worker_id 路由" --> W1
-    R --> W2
-```
+<p align="center">
+  <img src="icon/agentic-ghidra-flow.svg" alt="MCP 与 REST 客户端驱动 supervisor，后者按 worker_id 把每次调用路由到隔离的 JVM 工作进程" width="760"/>
+</p>
 
 先启动一次 supervisor，然后从任意一侧驱动它：
 
@@ -267,25 +226,6 @@ curl -s -XPOST localhost:29950/api/v1/tools/decomp.function \
 `--rest-api-key <sha256-hex>`（或环境变量 `GHIDRA_ADVANCED_REST_API_KEY`）后，
 `/api/v1/*` 要求 `Authorization: Bearer <token>` 或 `X-API-Key`；每个 key 都是其独立的
 所有者，用于会话隔离。
-
-### 通过脚本使用
-
-[`tests/api_scripts/`](tests/api_scripts) 存放针对真实 supervisor 的独立可重跑验收脚本。
-所有套件共享同一个 HTTP 代码路径 `rest_client.py`，证据 JSON 写入
-`runtime/acceptance/api/`：
-
-| 套件 | 覆盖范围 |
-| --- | --- |
-| `ApiInfra` | health、mcp、program、project、task、analysis、transaction、memory 与 listing 族，每次跑一个真实二进制 |
-| `ApiDecompFlow2` | decomp、pcode、graph、search、reference 与 annotation 族；写入严格限制在 transaction begin 到 revert 之间，并附带预期拒绝探针 |
-| `ApiPatchLoad` | 全部补丁操作与受门禁的 ghidra 族；两个工作进程上的混合、并发与批量负载浸泡 |
-| `ApiReconstruction2` | 84 项重建操作：function、variable、parameter、stackframe、type、layout、symbol、namespace、class、external、equate |
-
-```bash
-python tests/api_scripts/ApiInfra/test_infra.py \
-  --base http://127.0.0.1:29950 --worker api_infra \
-  --binary /path/to/binary --label mybin
-```
 
 ### 包含内容
 

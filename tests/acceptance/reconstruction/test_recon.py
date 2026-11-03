@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SUITE_ROOT = HERE.parent            # tests/api_scripts
+SUITE_ROOT = HERE.parent            # tests/acceptance
 REPO_ROOT = SUITE_ROOT.parent       # repo root
 sys.path.insert(0, str(SUITE_ROOT))
 
