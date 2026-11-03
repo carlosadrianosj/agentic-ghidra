@@ -1,6 +1,6 @@
 [project]
 name = "pyghidra-mcp"
-version = "0.2.7"
+version = "1.0.0"
 description = "Python Command-Line Ghidra MCP"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -28,7 +28,7 @@ keywords = [
     "reverse-engineering"
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -54,7 +54,6 @@ dev = [
     "ruff>=0.11.4",
     "tomli>=2.0.1",
     "tomli-w>=1.0.0",
-    "pre-commit>=3.0.0",
     "pyright>=1.1.0",
     "uv>=0.8.11",
 ]
@@ -72,7 +71,6 @@ dev = [
     "ruff>=0.11.4",
     "tomli>=2.0.1",
     "tomli-w>=1.0.0",
-    "pre-commit>=3.0.0",
     "pyright>=1.1.0",
     "uv>=0.8.11",
 ]
