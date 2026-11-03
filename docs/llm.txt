@@ -1,0 +1,2861 @@
+# Agentic-Ghidra
+
+> Agentic binary reverse engineering over one headless Ghidra catalog: 239 tools
+> through MCP and REST, isolated JVM workers, transactions, no GUI.
+
+Repo: https://github.com/carlosadrianosj/agentic-ghidra (Apache-2.0). This file is a
+complete usage reference for LLM clients: how to connect, the response envelope,
+routing, sessions, transactions, a worked example with real outputs, and every
+tool with its input schema.
+
+## Quickstart
+
+Requirements: macOS or Linux, JDK 21, Ghidra 12.1.4, uv.
+
+```bash
+./run.sh          # detects Ghidra, uv sync, default worker config, port 29840
+```
+
+- MCP endpoint: http://127.0.0.1:29840/mcp (any MCP client)
+- REST base: http://127.0.0.1:29840 (health at /health, tools at /api/v1)
+
+## Using via MCP
+
+Point any MCP client at the supervisor:
+
+```json
+{
+  "mcpServers": {
+    "ghidra": { "url": "http://127.0.0.1:29840/mcp" }
+  }
+}
+```
+
+Every exposed tool schema carries an extra `worker_id` string property: the
+explicit target worker from `worker_status`. Workers are never auto rerouted; a
+call names its worker or fails. Workers boot on first routed call, each with an
+isolated project, port and index.
+
+## Using via REST
+
+Same process and port. Call any tool by name with a JSON body holding its input
+schema plus the transport level `worker_id`:
+
+```bash
+curl -s localhost:29840/health | jq .status
+curl -s "localhost:29840/api/v1/tools?family=decomp" | jq .count
+curl -s -XPOST localhost:29840/api/v1/tools/decomp.function \
+  -H 'content-type: application/json' \
+  -d '{"worker_id":"main","session_id":"...","function_start":"_main"}'
+```
+
+| Endpoint | Purpose |
+| --- | --- |
+| GET /health | Liveness plus worker snapshot |
+| GET /api/v1/tools | Tool catalog with input schemas; filters `family`, `q`, `read_only` |
+| GET /api/v1/tools/{name} | Input schema of one tool |
+| POST /api/v1/tools/{name} | Invoke any tool by name |
+| POST /api/v1/batch | Sequential calls; `pipeline: true` feeds each result into the next call |
+| GET /api/v1/workers | Worker snapshot |
+| POST /api/v1/workers/{worker_id}/{start,stop,restart} | Worker lifecycle |
+| GET/POST /api/v1/investigations | List or create team investigations |
+| GET /api/v1/investigations/{investigation_id} | One investigation |
+| GET /api/v1/openapi.json | Machine readable route list |
+
+## Response envelope, errors, auth
+
+Every success returns the same envelope:
+
+```json
+{"status":"ok","tool":"decomp.function","duration_ms":11,"session_id":"main:...","result":{...}}
+```
+
+Errors map to HTTP by exception kind: ValueError 400, FileNotFoundError 404,
+PermissionError 403, TimeoutError 504, unknown tool 404.
+
+Dev mode (default, loopback) shares one `rest-local` owner. Pass
+`--rest-api-key <sha256-hex>` (or GHIDRA_ADVANCED_REST_API_KEY) to require
+`Authorization: Bearer <token>` or `X-API-Key` on /api/v1/*; each key is its own
+owner for session isolation.
+
+## Sessions, transactions, routing
+
+- `session_id` binds a program open in one worker. Opening a program returns it;
+  every later tool call repeats it plus `worker_id`.
+- Sessions have explicit read/write modes. Write tools refuse read only sessions.
+- Mutations can run inside `transaction.begin` ... `transaction.commit` (or
+  `transaction.revert`), with undo and redo available.
+- After any mutation the decompiler and index caches invalidate; the next read
+  sees current program state.
+- `ghidra.call`, `ghidra.eval` and `ghidra.script` require the supervisor flag
+  `--advanced-trusted-code` (default off). They execute arbitrary code in the
+  worker JVM: only enable for trusted local clients. Transports have no auth
+  beyond the optional REST key; never expose them to untrusted networks.
+
+## Worked example (real outputs, Ghidra 12.1.4, Mach-O ARM64)
+
+Open bytes on worker `main` (read only). The worker boots on this first routed
+call; `duration_ms` drops to single digits afterwards:
+
+```json
+POST /api/v1/tools/program.open_bytes
+{"worker_id":"main","data_base64":"<base64 of the binary>","filename":"llms_demo.bin","read_only":true}
+
+{"status":"ok","tool":"program.open_bytes","duration_ms":6421,
+ "result":{"session_id":"main:648f83d8988be9f4:XtV64t9l...","project_id":"cc88cd392f6fed6e97fcf3f5",
+           "binary_name":"/llms_demo.bin-3bcc5a","name":"llms_demo.bin","read_only":true,"deterministic":false},
+ "session_id":"main:648f83d8988be9f4:XtV64t9l..."}
+```
+
+List functions with the returned session:
+
+```json
+POST /api/v1/tools/function.list
+{"worker_id":"main","session_id":"main:648f83d8988be9f4:XtV64t9l...","limit":3}
+
+{"status":"ok","tool":"function.list","duration_ms":598,
+ "result":{"functions":[
+   {"name":"_advanced_type_fill","address":"1000004f8","signature":"undefined _advanced_type_fill(void)",
+    "external":false,"thunk":false,"body":"[[1000004f8, 100000527]]","parameter_count":0,
+    "calling_convention":"unknown","return_type":"undefined","varargs":false,"inline":false,
+    "noreturn":false,"custom_storage":false},
+   ...
+ ]}}
+```
+
+Decompile one function by name or address:
+
+```json
+POST /api/v1/tools/decomp.function
+{"worker_id":"main","session_id":"main:648f83d8988be9f4:XtV64t9l...","function_start":"_advanced_add"}
+
+{"status":"ok","tool":"decomp.function","duration_ms":11,
+ "result":{"function":"100000528","signature":"int _advanced_add(int param_1,int param_2);",
+           "code":"\nint _advanced_add(int param_1,int param_2)\n\n{\n  ...\n}\n"}}
+```
+
+Close the session:
+
+```json
+POST /api/v1/tools/program.close
+{"worker_id":"main","session_id":"main:648f83d8988be9f4:XtV64t9l..."}
+
+{"status":"ok","tool":"program.close","duration_ms":2,"result":{"closed":true,"session_id":"main:..."}}
+```
+
+## Tool reference
+
+All 239 tools follow the same rules: names are dotted `family.operation`, every
+call carries `worker_id` plus the tool input schema, every response uses the
+envelope above. Mode marks read only tools; anything else needs a writable
+session.
+
+## analysis (9)
+
+Run and configure Ghidra analysis, inspect analyzer and option state.
+
+#### analysis.analyzers.list
+
+Invoke analysis.analyzers.list through Options analysis boolean entries.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+- `query`: string
+
+#### analysis.analyzers.set
+
+Invoke analysis.analyzers.set through Options.setBoolean.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `name`: string (required)
+- `enabled`: boolean (required)
+
+#### analysis.clear_cache
+
+Invoke analysis.clear_cache through DecompInterface.flushCache, Chroma.delete_collection.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+
+#### analysis.options.get
+
+Invoke analysis.options.get through Options.getObject.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `name`: string (required)
+
+#### analysis.options.list
+
+Invoke analysis.options.list through Options.getOptionNames/getObject.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+- `query`: string
+
+#### analysis.options.set
+
+Invoke analysis.options.set through Options typed setters.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `name`: string (required)
+- `value`: any (required)
+
+#### analysis.status
+
+Invoke analysis.status through AutoAnalysisManager.isAnalyzing.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+
+#### analysis.update
+
+Invoke analysis.update through AutoAnalysisManager.startAnalysis.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+
+#### analysis.update_and_wait
+
+Invoke analysis.update_and_wait through AutoAnalysisManager.startAnalysis.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+
+## bookmark (4)
+
+Create, list and remove address bookmarks.
+
+#### bookmark.add
+
+Invoke bookmark.add through BookmarkManager.setBookmark.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `category`: string (required)
+- `comment`: string (required)
+- `bookmark_type`: string (default "NOTE")
+
+#### bookmark.clear
+
+Invoke bookmark.clear through BookmarkManager.removeBookmarks(AddressSetView, TaskMonitor).
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `start`: integer|string (required)
+- `end`: integer|string
+- `length`: integer
+- `bookmark_type`: string
+
+#### bookmark.list
+
+Invoke bookmark.list through BookmarkManager.getBookmarks/getBookmarksIterator.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string
+- `bookmark_type`: string
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+
+#### bookmark.remove
+
+Invoke bookmark.remove through BookmarkManager.removeBookmark.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `bookmark_type`: string
+- `category`: string
+
+## class (1)
+
+Create Ghidra classes.
+
+#### class.create
+
+Invoke class.create through SymbolTable.createClass.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `name`: string (required)
+- `parent`: string
+
+## comment (4)
+
+Read and write plate, pre, post, eol and repeatable comments.
+
+#### comment.get
+
+Invoke comment.get through Listing.getComment; Function.getComment/getRepeatableComment.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string
+- `comment_type`: string (default "eol")
+- `function_start`: integer|string
+- `scope`: string (default "listing")
+
+#### comment.get_all
+
+Invoke comment.get_all through Listing.getComment; Function.getComment/getRepeatableComment.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `include_function`: boolean (default true)
+
+#### comment.list
+
+Invoke comment.list through Listing.getCommentAddressIterator/getComment.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `start`: integer|string
+- `end`: integer|string
+- `comment_type`: string
+- `query`: string
+- `case_sensitive`: boolean (default false)
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+
+#### comment.set
+
+Invoke comment.set through Listing.setComment; Function.setComment/setRepeatableComment.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `comment`: string (required)
+- `address`: integer|string
+- `comment_type`: string (default "eol")
+- `function_start`: integer|string
+- `scope`: string (default "listing")
+
+## context (3)
+
+Inspect and set processor context register ranges.
+
+#### context.get
+
+Invoke context.get through ProgramContext.getValue(Register, Address, boolean).
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `register`: string (required)
+- `address`: integer|string (required)
+- `signed`: boolean (default false)
+
+#### context.ranges
+
+Invoke context.ranges through ProgramContext.getRegisterValueAddressRanges/getValue.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `register`: string (required)
+- `start`: integer|string
+- `end`: integer|string
+
+#### context.set
+
+Invoke context.set through ProgramContext.setValue/remove.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `register`: string (required)
+- `start`: integer|string (required)
+- `end`: integer|string
+- `length`: integer
+- `value`: integer|string
+- `clear`: boolean (default false)
+
+## decomp (12)
+
+Decompile functions, trace types, rename and retype globals, write results back.
+
+#### decomp.ast
+
+Invoke decomp.ast through DecompileResults.getCCodeMarkup / ClangNode.Child.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `timeout_secs`: integer (default 30)
+
+#### decomp.function
+
+Invoke decomp.function through DecompInterface.decompileFunction / DecompileResults.getDecompiledFunction.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `timeout_secs`: integer (default 30)
+
+#### decomp.global.rename
+
+Invoke decomp.global.rename through HighSymbol / HighFunctionDBUtil.updateDBVariable.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+- `new_name`: string (required)
+- `storage`: string
+- `timeout_secs`: integer (default 30)
+
+#### decomp.global.retype
+
+Invoke decomp.global.retype through HighSymbol / HighFunctionDBUtil.updateDBVariable.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+- `data_type`: string (required)
+- `storage`: string
+- `timeout_secs`: integer (default 30)
+
+#### decomp.high_function.summary
+
+Invoke decomp.high_function.summary through HighFunction / PcodeBlockBasic / HighSymbol / VarnodeAST.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `timeout_secs`: integer (default 30)
+
+#### decomp.override.get
+
+Invoke decomp.override.get through HighFunction.findOverrideSpace / HighFunctionDBUtil.readOverride.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `callsite`: integer|string (required)
+
+#### decomp.override.set
+
+Invoke decomp.override.set through FunctionSignatureParser / HighFunctionDBUtil.writeOverride.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `callsite`: integer|string (required)
+- `signature`: string (required)
+
+#### decomp.tokens
+
+Invoke decomp.tokens through ClangToken AST traversal / getVarnode / getPcodeOp.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `timeout_secs`: integer (default 30)
+
+#### decomp.trace_type.backward
+
+Invoke decomp.trace_type.backward through HighVariable.getInstances / VarnodeAST.getDef / PcodeOp.getInput.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+- `ordinal`: integer
+- `storage`: string
+- `timeout_secs`: integer (default 30)
+
+#### decomp.trace_type.forward
+
+Invoke decomp.trace_type.forward through HighVariable.getInstances / VarnodeAST.getDescendants / PcodeOp.getOutput.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+- `ordinal`: integer
+- `storage`: string
+- `timeout_secs`: integer (default 30)
+
+#### decomp.writeback.locals
+
+Invoke decomp.writeback.locals through HighFunctionDBUtil.commitLocalNamesToDatabase.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `timeout_secs`: integer (default 30)
+
+#### decomp.writeback.params
+
+Invoke decomp.writeback.params through HighFunctionDBUtil.commitParamsToDatabase.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `use_data_types`: boolean (default true)
+- `commit_return`: boolean (default false)
+- `timeout_secs`: integer (default 30)
+
+## Legacy tools (20)
+
+The 20 original pyghidra-mcp headless tools. They are preserved as aliases with their source names; the advanced catalog covers the same ground.
+
+#### decompile_function
+
+Decompile function(s) to pseudo-C by name or address.
+
+    Accepts a single target or a list for batch decompilation.
+    Rich response flags attach callees, strings, and/or xrefs to each result.
+    `timeout_sec` applies per target.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+- `name_or_address`: any (required)
+- `include_callees`: boolean (default false)
+- `include_strings`: boolean (default false)
+- `include_xrefs`: boolean (default false)
+- `timeout_sec`: integer (default 30)
+
+#### delete_project_binary
+
+Delete a binary from the project.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+
+#### disassemble
+
+Disassemble raw instructions at any address, like objdump.
+
+    `listing` is one instruction per line: address, mnemonic, operands, plus a hex
+    bytes column if `include_bytes=True`. Returns up to `count` instructions (max 200).
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+- `address`: string (required)
+- `count`: integer (default 20)
+- `include_bytes`: boolean (default false)
+
+#### gen_callgraph
+
+Generate a MermaidJS call graph for a function.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+- `function_name`: string (required)
+- `direction`: calling|called (default "calling")
+- `display_type`: flow|flow_ends (default "flow")
+- `condense_threshold`: integer (default 50)
+- `top_layers`: integer (default 3)
+- `bottom_layers`: integer (default 3)
+- `max_run_time`: integer (default 120)
+
+#### import_binary
+
+Import a binary into the project from a file path.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_path`: string (required)
+
+#### list_exports
+
+List exported symbols, optionally filtered by regex query.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+- `query`: string (default ".*")
+- `offset`: integer (default 0)
+- `limit`: integer (default 25)
+
+#### list_imports
+
+List imported symbols, optionally filtered by regex query.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+- `query`: string (default ".*")
+- `offset`: integer (default 0)
+- `limit`: integer (default 25)
+
+#### list_project_binaries
+
+List all binaries in the project with their status.
+
+Mode: write (needs a writable session).
+#### list_project_binary_metadata
+
+Get binary metadata: architecture, compiler, endianness, hashes, analysis counts.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+
+#### list_xrefs
+
+List cross-references to function(s), symbol(s), or address(es).
+
+    Accepts a single target or a list for batch lookup.
+    Suggests close matches on no exact hit.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+- `name_or_address`: any (required)
+
+#### read_bytes
+
+Read raw bytes at an address. Hex format supported (0x prefix optional).
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+- `address`: string (required)
+- `size`: integer (default 32)
+
+#### rename_function
+
+Rename a function.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+- `name_or_address`: string (required)
+- `new_name`: string (required)
+
+#### rename_variable
+
+Rename a parameter or local by exact name.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+- `function_name_or_address`: string (required)
+- `variable_name`: string (required)
+- `new_name`: string (required)
+
+#### save
+
+Save all programs.
+
+Mode: write (needs a writable session).
+#### search_code
+
+Search decompiled pseudo-C code.
+
+    Modes: semantic (vector similarity, default) or literal (exact match).
+    Results include both mode counts.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+- `query`: string (required)
+- `limit`: integer (default 5)
+- `offset`: integer (default 0)
+- `search_mode`: semantic|literal (default "semantic")
+- `include_full_code`: boolean (default true)
+- `preview_length`: integer (default 500)
+- `similarity_threshold`: number (default 0.0)
+
+#### search_strings
+
+Search for strings within a binary.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+- `query`: string (required)
+- `limit`: integer (default 100)
+
+#### search_symbols_by_name
+
+Search symbols by regex pattern (case-insensitive).
+
+    Supports full regex (e.g. ``^main$``, ``func.*init``). Plain substrings
+    still work since they are valid regex.
+
+    Set ``functions_only=True`` to search only function symbols
+    (excludes labels, variables, classes, namespaces).
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+- `query`: string (required)
+- `functions_only`: boolean (default false)
+- `offset`: integer (default 0)
+- `limit`: integer (default 25)
+
+#### set_comment
+
+Set a decompiler or listing comment.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+- `target`: string (required)
+- `comment`: string (required)
+- `comment_type`: decompiler|plate|pre|eol|post|repeatable (required)
+
+#### set_function_prototype
+
+Set a function prototype. Invalid input returns Ghidra's error.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+- `function_name_or_address`: string (required)
+- `prototype`: string (required)
+
+#### set_variable_type
+
+Set a parameter or local type by exact name.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_name`: string (required)
+- `function_name_or_address`: string (required)
+- `variable_name`: string (required)
+- `type_name`: string (required)
+
+## equate (4)
+
+Manage equates, mapping scalar values to names.
+
+#### equate.clear_range
+
+Invoke equate.clear_range through EquateTable.deleteAddressRange(Address, Address, TaskMonitor).
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `start`: integer|string (required)
+- `end`: integer|string
+- `length`: integer
+
+#### equate.create
+
+Invoke equate.create through EquateTable.createEquate/getEquate; Equate.addReference.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `name`: string (required)
+- `value`: integer|string (required)
+- `operand_index`: integer (default 0)
+
+#### equate.delete
+
+Invoke equate.delete through EquateTable.removeEquate; Equate.removeReference.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `name`: string (required)
+- `address`: integer|string
+- `operand_index`: integer
+
+#### equate.list
+
+Invoke equate.list through EquateTable.getEquates/getEquate; Equate.getReferences.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `name`: string
+- `address`: integer|string
+- `operand_index`: integer
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+
+## external (11)
+
+Manage external libraries, locations, entry points, imports and exports.
+
+#### external.entrypoint.add
+
+Invoke external.entrypoint.add through SymbolTable.addExternalEntryPoint.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+
+#### external.entrypoint.list
+
+Invoke external.entrypoint.list through SymbolTable.getExternalEntryPointIterator.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+
+#### external.entrypoint.remove
+
+Invoke external.entrypoint.remove through SymbolTable.removeExternalEntryPoint.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+
+#### external.exports.list
+
+Invoke external.exports.list through SymbolTable.getExternalEntryPointIterator; getPrimarySymbol.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+
+#### external.function.create
+
+Invoke external.function.create through ExternalManager.addExtFunction.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `library_name`: string (required)
+- `name`: string (required)
+- `external_address`: integer|string
+
+#### external.imports.list
+
+Invoke external.imports.list through ExternalManager.getExternalLocations(String).
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+
+#### external.library.create
+
+Invoke external.library.create through ExternalManager.addExternalLibraryName.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `name`: string (required)
+
+#### external.library.list
+
+Invoke external.library.list through ExternalManager.getExternalLibraryNames; getExternalLibraryPath.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+
+#### external.library.set_path
+
+Invoke external.library.set_path through ExternalManager.setExternalPath.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `name`: string (required)
+- `path`: string (required)
+- `user_defined`: boolean (default true)
+
+#### external.location.create
+
+Invoke external.location.create through ExternalManager.addExtLocation.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `library_name`: string (required)
+- `label`: string
+- `external_address`: integer|string
+
+#### external.location.get
+
+Invoke external.location.get through ExternalManager.getExternalLocation; ExternalLocation.getAddress.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string
+- `name`: string
+
+## function (19)
+
+Create, delete, rename and inspect functions, signatures and calling conventions.
+
+#### function.at
+
+Invoke function.at through FunctionManager.getFunctionAt/getFunctionContaining.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+
+#### function.batch.run
+
+Run the seven published batch actions, never arbitrary Python or mutation.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `action`: string (required)
+- `query`: string
+- `offset`: integer (default 0)
+- `limit`: integer (default 50)
+- `timeout_secs`: integer (default 30)
+
+#### function.body.set
+
+Invoke function.body.set through Function.setBody.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `start`: integer|string (required)
+- `end`: integer|string
+- `length`: integer
+
+#### function.by_name
+
+Invoke function.by_name through FunctionManager.getFunctions; Function.getName.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `name`: string (required)
+- `exact`: boolean (default false)
+- `limit`: integer (default 20)
+
+#### function.callees
+
+Invoke function.callees through Function.getCalledFunctions.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+
+#### function.callers
+
+Invoke function.callers through Function.getCallingFunctions.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+
+#### function.calling_convention.set
+
+Invoke function.calling_convention.set through Function.setCallingConvention.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+
+#### function.calling_conventions.list
+
+Invoke function.calling_conventions.list through FunctionManager.getCallingConventionNames.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+
+#### function.create
+
+Invoke function.create through CreateFunctionCmd.applyTo; Function.setName.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `name`: string
+
+#### function.delete
+
+Invoke function.delete through FunctionManager.removeFunction.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+
+#### function.flags.set
+
+Invoke function.flags.set through Function.setVarArgs/setInline/setNoReturn/setCustomVariableStorage.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `varargs`: boolean
+- `inline`: boolean
+- `noreturn`: boolean
+- `custom_storage`: boolean
+
+#### function.list
+
+Invoke function.list through FunctionManager.getFunctions.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+- `query`: string
+
+#### function.rename
+
+Invoke function.rename through Function.setName(SourceType.USER_DEFINED).
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+
+#### function.report
+
+Invoke function.report through Function; StackFrame; Function.getCallingFunctions/getCalledFunctions.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+
+#### function.return_type.set
+
+Invoke function.return_type.set through Function.setReturnType(SourceType.USER_DEFINED).
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `data_type`: string (required)
+
+#### function.signature.get
+
+Invoke function.signature.get through Function.getSignature/getParameters.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+
+#### function.signature.set
+
+Invoke function.signature.set through FunctionSignatureParser (DataTypeParser); ApplyFunctionSignatureCmd.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `signature`: string (required)
+
+#### function.thunk.set
+
+Invoke function.thunk.set through Function.setThunkedFunction.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `thunk_target`: integer|string (required)
+
+#### function.variables
+
+Invoke function.variables through Function.getParameters/getLocalVariables.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+
+## ghidra (4)
+
+Trusted execution: eval, script and call into the live Ghidra JVM. Gated behind --advanced-trusted-code.
+
+#### ghidra.call
+
+Invoke ghidra.call through JPype JClass and owned Program public methods.
+
+Mode: write (needs a writable session).
+Input:
+- `target`: string (required)
+- `args`: array<any>
+- `kwargs`: object
+- `session_id`: string
+- `write`: boolean (default false)
+
+#### ghidra.eval
+
+Invoke ghidra.eval through Python compile/exec against owned Program.
+
+Mode: write (needs a writable session).
+Input:
+- `code`: string (required)
+- `session_id`: string
+- `write`: boolean (default false)
+
+#### ghidra.info
+
+Invoke ghidra.info through Application.getApplicationVersion.
+
+Mode: read only.
+#### ghidra.script
+
+Invoke ghidra.script through GhidraScriptProvider/GhidraScript.execute.
+
+Mode: write (needs a writable session).
+Input:
+- `path`: string (required)
+- `session_id`: string
+- `script_args`: array<string>
+- `write`: boolean (default false)
+
+## graph (3)
+
+Control flow and call path graphs.
+
+#### graph.basic_blocks
+
+Invoke graph.basic_blocks through BasicBlockModel.getCodeBlocksContaining.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+
+#### graph.call_paths
+
+Invoke graph.call_paths through Function.getCalledFunctions.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `source_function`: integer|string (required)
+- `target_function`: integer|string (required)
+- `max_depth`: integer (default 4)
+- `limit`: integer (default 10)
+
+#### graph.cfg.edges
+
+Invoke graph.cfg.edges through CodeBlock.getDestinations / CodeBlockReference.getFlowType.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+
+## health (1)
+
+Liveness probes.
+
+#### health.ping
+
+Invoke health.ping through ghidra.framework.Application.
+
+Mode: read only.
+## Management tools (7)
+
+#### investigation.create
+
+Snapshot one binary once and create isolated per-team projects, indexes and workers. Teams investigate the same immutable source independently; original source is never mutated.
+
+Mode: write (needs a writable session).
+Input:
+- `binary_path`: string (required, min length 1)
+- `teams`: array<string> (required)
+- `name`: ['string', 'null']
+- `start`: boolean (default true)
+
+#### investigation.list
+
+List persisted investigations and their isolated team workers.
+
+Mode: read only.
+#### investigation.status
+
+Inspect one investigation's immutable source identity and per-team worker states.
+
+Mode: read only.
+Input:
+- `investigation_id`: string (required, min length 1)
+
+#### worker_restart
+
+Explicitly stop, save and close one worker, then reconnect a replacement for the same project. Refuses active or queued calls unless force=true explicitly accepts unknown outcomes. Requests are never replayed or rerouted; shutdown save failures are reported.
+
+Mode: write (needs a writable session).
+Input:
+- `worker_id`: string (required, min length 1)
+- `force`: boolean (default false)
+
+#### worker_start
+
+Start the explicitly selected worker on demand, respecting the active JVM cap.
+
+Mode: write (needs a writable session).
+Input:
+- `worker_id`: string (required, min length 1)
+
+#### worker_status
+
+Inspect owned workers, project identities, process state, logs and recent failures.
+
+Mode: read only.
+Input:
+- `worker_id`: string (min length 1)
+
+#### worker_stop
+
+Save and close the selected worker. Refuses busy workers unless force=true; never evicts others.
+
+Mode: write (needs a writable session).
+Input:
+- `worker_id`: string (required, min length 1)
+- `force`: boolean (default false)
+
+## layout (17)
+
+Build structs, unions and enums, including fill from decompiler inference.
+
+#### layout.enum.create
+
+Invoke layout.enum.create through EnumDataType; DataTypeManager.addDataType.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `name`: string (required)
+- `category`: string (default "/")
+- `size`: integer (default 4)
+
+#### layout.enum.member.add
+
+Invoke layout.enum.member.add through Enum.add.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `enum_path`: string
+- `enum_name`: string
+- `name`: string (required)
+- `value`: integer|string (required)
+- `comment`: string
+
+#### layout.enum.member.remove
+
+Invoke layout.enum.member.remove through Enum.contains/remove.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `enum_path`: string
+- `enum_name`: string
+- `name`: string (required)
+
+#### layout.inspect.components
+
+Invoke layout.inspect.components through Composite.getDefinedComponents/getComponents.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `path`: string
+- `name`: string
+
+#### layout.struct.bitfield.add
+
+Invoke layout.struct.bitfield.add through Structure.insertBitFieldAt; BitFieldDataType.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `struct_path`: string
+- `struct_name`: string
+- `byte_offset`: integer (required)
+- `byte_width`: integer (required)
+- `bit_offset`: integer (required)
+- `data_type`: string (required)
+- `bit_size`: integer (required)
+- `field_name`: string
+- `comment`: string
+
+#### layout.struct.create
+
+Invoke layout.struct.create through StructureDataType; DataTypeManager.addDataType.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `name`: string (required)
+- `category`: string (default "/")
+- `length`: integer (default 0)
+
+#### layout.struct.field.add
+
+Invoke layout.struct.field.add through Structure.add/insertAtOffset.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `struct_path`: string
+- `struct_name`: string
+- `field_name`: string
+- `data_type`: string (required)
+- `offset`: integer
+- `length`: integer
+- `comment`: string
+
+#### layout.struct.field.clear
+
+Invoke layout.struct.field.clear through Structure.clearAtOffset.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `struct_path`: string
+- `struct_name`: string
+- `offset`: integer (required)
+
+#### layout.struct.field.comment.set
+
+Invoke layout.struct.field.comment.set through DataTypeComponent.setComment.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `struct_path`: string
+- `struct_name`: string
+- `offset`: integer
+- `ordinal`: integer
+- `field_name`: string
+- `comment`: string (required)
+
+#### layout.struct.field.rename
+
+Invoke layout.struct.field.rename through DataTypeComponent.setFieldName.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `struct_path`: string
+- `struct_name`: string
+- `old_name`: string
+- `new_name`: string (required)
+- `offset`: integer
+- `ordinal`: integer
+
+#### layout.struct.field.replace
+
+Invoke layout.struct.field.replace through Structure.replaceAtOffset.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `struct_path`: string
+- `struct_name`: string
+- `offset`: integer (required)
+- `data_type`: string (required)
+- `length`: integer
+- `field_name`: string
+- `comment`: string
+
+#### layout.struct.fill_from_decompiler
+
+Invoke layout.struct.fill_from_decompiler through FillOutStructureHelper.processStructure(HighVariable,Function,boolean,boolean,DecompInterface).
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+- `ordinal`: integer
+- `storage`: string
+- `create_new_structure`: boolean (default true)
+- `create_class_if_needed`: boolean (default false)
+- `timeout_secs`: integer (default 30)
+
+#### layout.struct.get
+
+Invoke layout.struct.get through DataTypeManager.getDataType; Structure.getDefinedComponents.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `struct_path`: string
+- `struct_name`: string
+
+#### layout.struct.resize
+
+Invoke layout.struct.resize through Structure.setLength.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `struct_path`: string
+- `struct_name`: string
+- `length`: integer (required)
+
+#### layout.union.create
+
+Invoke layout.union.create through UnionDataType; DataTypeManager.addDataType.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `name`: string (required)
+- `category`: string (default "/")
+
+#### layout.union.member.add
+
+Invoke layout.union.member.add through Union.add.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `union_path`: string
+- `union_name`: string
+- `field_name`: string
+- `data_type`: string (required)
+- `length`: integer
+- `comment`: string
+
+#### layout.union.member.remove
+
+Invoke layout.union.member.remove through Union.delete.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `union_path`: string
+- `union_name`: string
+- `ordinal`: integer
+- `field_name`: string
+
+## listing (13)
+
+Code units, data, disassembly seeds and ranges.
+
+#### listing.clear
+
+Invoke listing.clear through Listing.clearCodeUnits; ClearCmd(AddressSetView,ClearOptions); ReferenceManager.addReference.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `start`: integer|string (required)
+- `end`: integer|string
+- `length`: integer
+- `clear_context`: boolean (default false)
+- `clear_symbols`: boolean (default false)
+- `clear_comments`: boolean (default false)
+- `clear_properties`: boolean (default false)
+- `clear_functions`: boolean (default false)
+- `clear_registers`: boolean (default false)
+- `clear_equates`: boolean (default false)
+- `clear_user_references`: boolean (default false)
+- `clear_analysis_references`: boolean (default false)
+- `clear_import_references`: boolean (default false)
+- `clear_default_references`: boolean (default false)
+- `clear_bookmarks`: boolean (default false)
+
+#### listing.code_unit.after
+
+Invoke listing.code_unit.after through Listing.getCodeUnitAfter.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+
+#### listing.code_unit.at
+
+Invoke listing.code_unit.at through Listing.getCodeUnitAt.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+
+#### listing.code_unit.before
+
+Invoke listing.code_unit.before through Listing.getCodeUnitBefore.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+
+#### listing.code_unit.containing
+
+Invoke listing.code_unit.containing through Listing.getCodeUnitContaining.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+
+#### listing.code_units.list
+
+Invoke listing.code_units.list through Listing.getCodeUnits(AddressSetView,boolean).
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `start`: integer|string
+- `end`: integer|string
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+- `forward`: boolean (default true)
+
+#### listing.data.at
+
+Invoke listing.data.at through Listing.getDataAt.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+
+#### listing.data.clear
+
+Invoke listing.data.clear through Listing.clearCodeUnits.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `length`: integer (default 1)
+
+#### listing.data.create
+
+Invoke listing.data.create through Listing.createData; Listing.clearCodeUnits.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `data_type`: string (required)
+- `length`: integer
+- `clear_existing`: boolean (default true)
+
+#### listing.data.list
+
+Invoke listing.data.list through Listing.getDefinedData(boolean).
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+
+#### listing.disassemble.function
+
+Invoke listing.disassemble.function through FunctionManager.getFunctionContaining; Listing.getInstructions.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `limit`: integer (default 500)
+
+#### listing.disassemble.range
+
+Invoke listing.disassemble.range through Listing.getInstructions(AddressSetView,boolean).
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `start`: integer|string (required)
+- `length`: integer (required)
+- `limit`: integer (default 200)
+
+#### listing.disassemble.seed
+
+Invoke listing.disassemble.seed through DisassembleCommand.applyTo; DisassembleCommand.getDisassembledAddressSet.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `limit`: integer (default 128)
+- `clear_existing`: boolean (default false)
+
+## mcp (1)
+
+Transport level metadata such as the response format.
+
+#### mcp.response_format
+
+Invoke mcp.response_format through MCP structured result contract.
+
+Mode: read only.
+## memory (5)
+
+Read and write memory, manage memory blocks.
+
+#### memory.block.create
+
+Invoke memory.block.create through Memory.createInitializedBlock; Memory.createUninitializedBlock; MemoryBlock.setPermissions.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `name`: string (required)
+- `address`: integer|string (required)
+- `length`: integer (required)
+- `initialized`: boolean (default true)
+- `fill`: integer (default 0)
+- `read`: boolean (default true)
+- `write`: boolean (default false)
+- `execute`: boolean (default false)
+- `comment`: string
+
+#### memory.block.remove
+
+Invoke memory.block.remove through Memory.getBlock; Memory.removeBlock.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `name`: string
+- `address`: integer|string
+
+#### memory.blocks.list
+
+Invoke memory.blocks.list through Memory.getBlocks.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+
+#### memory.read
+
+Invoke memory.read through Memory.getBytes.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `length`: integer (required)
+
+#### memory.write
+
+Invoke memory.write through Memory.setBytes.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `data_base64`: string
+- `data_hex`: string
+
+## metadata (2)
+
+Store and query arbitrary program metadata.
+
+#### metadata.query
+
+Invoke metadata.query through Program.getOptionsNames/getOptions; Options.getOptionNames/getString.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `key`: string
+- `prefix`: string
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+
+#### metadata.store
+
+Invoke metadata.store through Program.getOptions; Options.setString.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `key`: string (required)
+- `value`: any (required)
+
+## namespace (1)
+
+Create namespaces.
+
+#### namespace.create
+
+Invoke namespace.create through SymbolTable.createNameSpace.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `name`: string (required)
+- `parent`: string
+
+## parameter (4)
+
+Add, move, remove and replace function parameters.
+
+#### parameter.add
+
+Invoke parameter.add through ParameterImpl; Function.replaceParameters.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+- `data_type`: string (required)
+- `ordinal`: integer
+- `stack_offset`: integer
+- `register`: string
+
+#### parameter.move
+
+Invoke parameter.move through ParameterImpl; Function.replaceParameters.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `ordinal`: integer (required)
+- `new_ordinal`: integer (required)
+
+#### parameter.remove
+
+Invoke parameter.remove through Function.replaceParameters.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `ordinal`: integer
+- `name`: string
+
+#### parameter.replace
+
+Invoke parameter.replace through ParameterImpl; Variable.setDataType; Function.replaceParameters.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `ordinal`: integer
+- `name`: string
+- `new_name`: string
+- `data_type`: string
+- `stack_offset`: integer
+- `register`: string
+
+## patch (3)
+
+Patch instructions: nop, assemble, invert branches.
+
+#### patch.assemble
+
+Invoke patch.assemble through Assemblers.getAssembler; Assembler.assembleLine/patchProgram.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `assembly`: string (required)
+
+#### patch.branch_invert
+
+Invoke patch.branch_invert through Instruction.getFlowType/getFlows; Assembler.assembleLine/patchProgram.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+
+#### patch.nop
+
+Invoke patch.nop through Assembler.assembleLine/patchProgram; Instruction.getLength.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `count`: integer (default 1)
+
+## pcode (4)
+
+Pcode operations, blocks and varnode uses.
+
+#### pcode.block
+
+Invoke pcode.block through BasicBlockModel.getFirstCodeBlockContaining / Instruction.getPcode.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+
+#### pcode.function
+
+Invoke pcode.function through Listing.getInstructions / Instruction.getPcode.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `limit`: integer (default 200)
+
+#### pcode.op.at
+
+Invoke pcode.op.at through Listing.getInstructionAt / Instruction.getPcode.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+
+#### pcode.varnode_uses
+
+Invoke pcode.varnode_uses through HighFunction.getVarnodes / VarnodeAST.getDef / getDescendants.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `varnode`: string
+- `address`: integer|string
+- `space`: string
+- `size`: integer
+- `timeout_secs`: integer (default 30)
+
+## program (12)
+
+Open, close, save, export and inspect programs.
+
+#### program.close
+
+Invoke program.close through ProgramRegistry session release.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+
+#### program.export_binary
+
+Invoke program.export_binary through GzfExporter, OriginalFileExporter, BinaryExporter.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `path`: string (required)
+- `format`: string (default "original_file")
+
+#### program.image_base.set
+
+Invoke program.image_base.set through Program.setImageBase.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `image_base`: integer|string (required)
+- `commit`: boolean (default true)
+
+#### program.list_open
+
+Invoke program.list_open through ProgramRegistry.
+
+Mode: read only.
+#### program.mode.get
+
+Invoke program.mode.get through ProgramRegistry session mode.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+
+#### program.mode.set
+
+Invoke program.mode.set through ProgramRegistry session mode.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `read_only`: boolean
+- `deterministic`: boolean
+
+#### program.open
+
+Invoke program.open through ProgramLoader.Builder.
+
+Mode: write (needs a writable session).
+Input:
+- `path`: string (required)
+- `update_analysis`: boolean (default true)
+- `read_only`: boolean (default true)
+- `project_location`: string
+- `project_name`: string
+- `program_name`: string
+- `language`: string
+- `compiler`: string
+- `loader`: string
+
+#### program.open_bytes
+
+Invoke program.open_bytes through ProgramLoader.Builder.
+
+Mode: write (needs a writable session).
+Input:
+- `data_base64`: string (required)
+- `filename`: string (default "session.bin")
+- `update_analysis`: boolean (default true)
+- `read_only`: boolean (default true)
+- `project_location`: string
+- `project_name`: string
+- `program_name`: string
+- `language`: string
+- `compiler`: string
+- `loader`: string
+
+#### program.report
+
+Invoke program.report through Program.getMetadata, getOptions.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+
+#### program.save
+
+Invoke program.save through DomainFile.save.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+
+#### program.save_as
+
+Invoke program.save_as through DomainFolder.createFile.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `program_name`: string (required)
+- `folder_path`: string (default "/")
+- `overwrite`: boolean (default true)
+
+#### program.summary
+
+Invoke program.summary through Program, FunctionManager, Memory.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+
+## project (7)
+
+Inspect Ghidra projects, files and folders.
+
+#### project.export
+
+Archive a closed project snapshot, never an actively written DB directory.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `destination`: string (required)
+
+#### project.file.info
+
+Invoke project.file.info through ProjectData.getFile.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `path`: string (required)
+
+#### project.files.list
+
+Invoke project.files.list through DomainFolder.getFiles.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `folder_path`: string (default "/")
+- `recursive`: boolean (default false)
+- `content_type`: string
+- `query`: string
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+
+#### project.folders.list
+
+Invoke project.folders.list through DomainFolder.getFolders.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `folder_path`: string (default "/")
+- `recursive`: boolean (default false)
+
+#### project.program.open
+
+Invoke project.program.open through DomainFile.getDomainObject.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `path`: string (required)
+- `read_only`: boolean
+- `update_analysis`: boolean (default false)
+
+#### project.program.open_existing
+
+Invoke project.program.open_existing through GhidraProject.openProject, DomainFile.getDomainObject.
+
+Mode: write (needs a writable session).
+Input:
+- `project_location`: string (required)
+- `project_name`: string (required)
+- `program_path`: string
+- `folder_path`: string (default "/")
+- `program_name`: string
+- `read_only`: boolean (default true)
+- `update_analysis`: boolean (default false)
+
+#### project.search.programs
+
+Invoke project.search.programs through DomainFile.getContentType.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `query`: string
+- `content_type`: string
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+
+## reference (12)
+
+Create, list, clear and delete references of every kind.
+
+#### reference.association.remove
+
+Invoke reference.association.remove through ReferenceManager.removeAssociation.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `from_address`: integer|string (required)
+- `to_address`: integer|string (required)
+- `operand_index`: integer (default 0)
+
+#### reference.association.set
+
+Invoke reference.association.set through ReferenceManager.setAssociation(Symbol, Reference).
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `from_address`: integer|string (required)
+- `to_address`: integer|string (required)
+- `operand_index`: integer (default 0)
+- `symbol_address`: integer|string (required)
+- `symbol_name`: string
+
+#### reference.clear_from
+
+Invoke reference.clear_from through ReferenceManager.removeAllReferencesFrom(Address, Address).
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `from_address`: integer|string (required)
+- `end_address`: integer|string
+
+#### reference.clear_to
+
+Invoke reference.clear_to through ReferenceManager.removeAllReferencesTo.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `to_address`: integer|string (required)
+
+#### reference.create.external
+
+Invoke reference.create.external through ReferenceManager.addExternalReference.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `from_address`: integer|string (required)
+- `library_name`: string (required)
+- `label`: string
+- `external_address`: integer|string
+- `reference_type`: string (default "DATA")
+- `operand_index`: integer (default 0)
+- `source_type`: string (default "USER_DEFINED")
+
+#### reference.create.memory
+
+Invoke reference.create.memory through ReferenceManager.addMemoryReference.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `from_address`: integer|string (required)
+- `to_address`: integer|string (required)
+- `reference_type`: string (default "DATA")
+- `operand_index`: integer (default 0)
+- `source_type`: string (default "USER_DEFINED")
+
+#### reference.create.register
+
+Invoke reference.create.register through ReferenceManager.addRegisterReference.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `from_address`: integer|string (required)
+- `register`: string (required)
+- `reference_type`: string (default "DATA")
+- `operand_index`: integer (default 0)
+- `source_type`: string (default "USER_DEFINED")
+
+#### reference.create.stack
+
+Invoke reference.create.stack through ReferenceManager.addStackReference.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `from_address`: integer|string (required)
+- `stack_offset`: integer (required)
+- `reference_type`: string (default "DATA")
+- `operand_index`: integer (default 0)
+- `source_type`: string (default "USER_DEFINED")
+
+#### reference.delete
+
+Invoke reference.delete through ReferenceManager.getReferencesFrom; delete.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `from_address`: integer|string (required)
+- `to_address`: integer|string
+- `operand_index`: integer
+
+#### reference.from
+
+Invoke reference.from through ReferenceManager.getReferencesFrom; getReferenceSourceIterator.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string
+- `start`: integer|string
+- `end`: integer|string
+- `limit`: integer (default 100)
+
+#### reference.primary.set
+
+Invoke reference.primary.set through ReferenceManager.setPrimary.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `from_address`: integer|string (required)
+- `to_address`: integer|string (required)
+- `operand_index`: integer (default 0)
+
+#### reference.to
+
+Invoke reference.to through ReferenceManager.getReferencesTo; getReferenceSourceIterator.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string
+- `start`: integer|string
+- `end`: integer|string
+- `limit`: integer (default 100)
+
+## relocation (2)
+
+List and add relocations.
+
+#### relocation.add
+
+Invoke relocation.add through RelocationTable.add(Address, Relocation.Status, int, long[], byte[]/int, String).
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `status`: string (default "APPLIED")
+- `type`: integer (default 0)
+- `values`: array<integer>
+- `byte_length`: integer (default 0)
+- `symbol_name`: string
+
+#### relocation.list
+
+Invoke relocation.list through RelocationTable.getRelocations(AddressSetView).
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `start`: integer|string
+- `end`: integer|string
+
+## search (7)
+
+Search bytes, instructions, text, constants, defined strings and pcode.
+
+#### search.bytes
+
+Invoke search.bytes through Memory.findBytes(Address,Address,byte[],byte[],boolean,TaskMonitor).
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `pattern_base64`: string
+- `pattern_hex`: string
+- `start`: integer|string
+- `end`: integer|string
+- `limit`: integer (default 100)
+
+#### search.constants
+
+Invoke search.constants through Listing.getInstructions; Instruction.getOpObjects; Scalar.getSignedValue; Scalar.getUnsignedValue.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `value`: integer|string (required)
+- `start`: integer|string
+- `end`: integer|string
+- `limit`: integer (default 100)
+
+#### search.defined_strings
+
+Invoke search.defined_strings through Listing.getDefinedData; Data.hasStringValue; Data.getDefaultValueRepresentation.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+- `query`: string
+
+#### search.instructions
+
+Invoke search.instructions through Listing.getInstructions; Instruction.toString.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `query`: string (required)
+- `case_sensitive`: boolean (default false)
+- `function_start`: integer|string
+- `start`: integer|string
+- `end`: integer|string
+- `limit`: integer (default 100)
+
+#### search.pcode
+
+Invoke search.pcode through Listing.getInstructions; Instruction.getPcode; PcodeOp.toString.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `query`: string (required)
+- `case_sensitive`: boolean (default false)
+- `function_start`: integer|string
+- `start`: integer|string
+- `end`: integer|string
+- `limit`: integer (default 100)
+
+#### search.resolve
+
+Invoke search.resolve through AddressFactory.getAddress; SymbolTable.getSymbols; Memory.contains.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `query`: integer|string (required)
+
+#### search.text
+
+Invoke search.text through Listing.getDefinedData; Data.getValue; Memory.getBytes.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `text`: string (required)
+- `case_sensitive`: boolean (default false)
+- `defined_strings_only`: boolean (default false)
+- `encoding`: string (default "utf-8")
+- `start`: integer|string
+- `end`: integer|string
+- `limit`: integer (default 100)
+
+## source (6)
+
+Map source files and line ranges to addresses.
+
+#### source.file.add
+
+Invoke source.file.add through SourceFileManager.addSourceFile; SourceFile; SourceFileIdType.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `path`: string (required)
+- `id_type`: string
+- `identifier_hex`: string
+
+#### source.file.list
+
+Invoke source.file.list through SourceFileManager.getAllSourceFiles.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+
+#### source.file.remove
+
+Invoke source.file.remove through SourceFileManager.removeSourceFile.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `path`: string (required)
+
+#### source.map.add
+
+Invoke source.map.add through SourceFileManager.addSourceMapEntry.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `path`: string (required)
+- `line_number`: integer (required)
+- `base_address`: integer|string (required)
+- `length`: integer (required)
+
+#### source.map.list
+
+Invoke source.map.list through SourceFileManager.getSourceMapEntries/getSourceMapEntryIterator.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `address`: integer|string
+- `path`: string
+- `min_line`: integer
+- `max_line`: integer
+
+#### source.map.remove
+
+Invoke source.map.remove through SourceFileManager.removeSourceMapEntry.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `path`: string (required)
+- `line_number`: integer (required)
+- `base_address`: integer|string (required)
+
+## stackframe (3)
+
+Inspect and create stack frame variables.
+
+#### stackframe.variable.clear
+
+Invoke stackframe.variable.clear through StackFrame.getVariableContaining/clearVariable.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `stack_offset`: integer (required)
+
+#### stackframe.variable.create
+
+Invoke stackframe.variable.create through StackFrame.createVariable(SourceType.USER_DEFINED).
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+- `stack_offset`: integer (required)
+- `data_type`: string (required)
+
+#### stackframe.variables
+
+Invoke stackframe.variables through Function.getStackFrame; StackFrame.getStackVariables.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+
+## symbol (7)
+
+Create, rename, move and delete symbols, set primary symbols.
+
+#### symbol.by_name
+
+Invoke symbol.by_name through SymbolTable.getAllSymbols(boolean); Symbol.getName(boolean).
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `name`: string (required)
+- `exact`: boolean (default false)
+- `limit`: integer (default 20)
+- `include_dynamic`: boolean (default true)
+
+#### symbol.create
+
+Invoke symbol.create through SymbolTable.createLabel; Symbol.setPrimary.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `name`: string (required)
+- `make_primary`: boolean (default true)
+
+#### symbol.delete
+
+Invoke symbol.delete through Symbol.delete.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `name`: string
+
+#### symbol.list
+
+Invoke symbol.list through SymbolTable.getAllSymbols(boolean).
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+- `include_dynamic`: boolean (default false)
+- `query`: string
+
+#### symbol.namespace.move
+
+Invoke symbol.namespace.move through Symbol.setNamespace.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `namespace`: string (required)
+- `name`: string
+
+#### symbol.primary.set
+
+Invoke symbol.primary.set through Symbol.setPrimary.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `name`: string
+
+#### symbol.rename
+
+Invoke symbol.rename through Symbol.setName(String, SourceType).
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `new_name`: string (required)
+- `old_name`: string
+
+## tag (4)
+
+Function tags with statistics.
+
+#### tag.add
+
+Invoke tag.add through FunctionTagManager.createFunctionTag; Function.addTag; FunctionTag.setComment.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+- `comment`: string (default "")
+
+#### tag.list
+
+Invoke tag.list through FunctionTagManager.getAllFunctionTags; Function.getTags.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string
+
+#### tag.remove
+
+Invoke tag.remove through Function.removeTag.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+
+#### tag.stats
+
+Invoke tag.stats through FunctionTagManager.getAllFunctionTags/getUseCount.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+
+## task (4)
+
+Async analysis tasks: status, result, cancel.
+
+#### task.analysis_update
+
+Invoke task.analysis_update through AutoAnalysisManager.startAnalysis.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+
+#### task.cancel
+
+Invoke task.cancel through TaskMonitor.cancel.
+
+Mode: write (needs a writable session).
+Input:
+- `task_id`: string (required)
+
+#### task.result
+
+Invoke task.result through Future result.
+
+Mode: read only.
+Input:
+- `task_id`: string (required)
+
+#### task.status
+
+Invoke task.status through Future state, TaskMonitor.
+
+Mode: read only.
+Input:
+- `task_id`: string (required)
+
+## transaction (6)
+
+Explicit transactions with commit, revert, undo and redo.
+
+#### transaction.begin
+
+Begin an owner-bound batch.
+
+Validation errors without program changes retain the batch. An operation
+that fails after modifying the program reverts the entire batch and reports
+that rollback in its error; Ghidra nested transactions are not savepoints.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `description`: string (default "MCP Transaction")
+
+#### transaction.commit
+
+Invoke transaction.commit through Program.endTransaction.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+
+#### transaction.redo
+
+Invoke transaction.redo through Program.redo.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+
+#### transaction.revert
+
+Invoke transaction.revert through Program.endTransaction.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+
+#### transaction.status
+
+Invoke transaction.status through Program.canUndo/canRedo.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+
+#### transaction.undo
+
+Invoke transaction.undo through Program.undo.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+
+## type (12)
+
+Parse C, define, list, rename and delete data types and categories.
+
+#### type.apply_at
+
+Invoke type.apply_at through Listing.clearCodeUnits/createData.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `address`: integer|string (required)
+- `data_type`: string (required)
+- `length`: integer
+- `clear_existing`: boolean (default true)
+
+#### type.archives.list
+
+Invoke type.archives.list through DataTypeManager.getLocalSourceArchive/getSourceArchives; SourceArchive.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+
+#### type.category.create
+
+Invoke type.category.create through DataTypeManager.createCategory.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `path`: string (required)
+
+#### type.category.list
+
+Invoke type.category.list through DataTypeManager.getCategory; Category.getCategories.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `path`: string (default "/")
+- `recursive`: boolean (default false)
+
+#### type.define_c
+
+Invoke type.define_c through CParser.parse; DataTypeManager.resolve.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `declaration`: string (required)
+- `name`: string
+- `category`: string (default "/")
+
+#### type.delete
+
+Invoke type.delete through DataTypeManager.remove.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `path`: string
+- `name`: string
+
+#### type.get
+
+Invoke type.get through DataTypeManager.getDataType/getAllDataTypes.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `path`: string
+- `name`: string
+
+#### type.get_by_id
+
+Invoke type.get_by_id through DataTypeManager.getDataType/getSourceArchive/findDataTypeForID.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `data_type_id`: integer
+- `universal_id`: integer
+- `source_archive_id`: integer
+
+#### type.list
+
+Invoke type.list through DataTypeManager.getAllDataTypes.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+- `offset`: integer (default 0)
+- `limit`: integer (default 100)
+- `query`: string
+
+#### type.parse_c
+
+Invoke type.parse_c through CParser.parse; DataTypeManager.resolve.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `declaration`: string (required)
+- `name`: string
+- `category`: string (default "/")
+
+#### type.rename
+
+Invoke type.rename through DataType.setName.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `path`: string
+- `name`: string
+- `new_name`: string (required)
+
+#### type.source_archives.list
+
+Invoke type.source_archives.list through DataTypeManager.getSourceArchives; SourceArchive.
+
+Mode: read only.
+Input:
+- `session_id`: string (required)
+
+## variable (5)
+
+Create, rename, retype and comment local variables.
+
+#### variable.comment.set
+
+Invoke variable.comment.set through Variable.setComment.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+- `comment`: string (required)
+- `ordinal`: integer
+- `storage`: string
+
+#### variable.local.create
+
+Invoke variable.local.create through VariableStorage; LocalVariableImpl; Function.addLocalVariable.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+- `data_type`: string (required)
+- `first_use_offset`: integer (default 0)
+- `stack_offset`: integer
+- `register`: string
+- `storage_address`: integer|string
+- `comment`: string
+
+#### variable.local.remove
+
+Invoke variable.local.remove through Function.removeVariable.
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+- `storage`: string
+
+#### variable.rename
+
+Invoke variable.rename through Variable.setName(SourceType.USER_DEFINED).
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+- `new_name`: string (required)
+- `ordinal`: integer
+- `storage`: string
+
+#### variable.retype
+
+Invoke variable.retype through Variable.setDataType(SourceType.USER_DEFINED).
+
+Mode: write (needs a writable session).
+Input:
+- `session_id`: string (required)
+- `function_start`: integer|string (required)
+- `name`: string (required)
+- `data_type`: string (required)
+- `ordinal`: integer
+- `storage`: string

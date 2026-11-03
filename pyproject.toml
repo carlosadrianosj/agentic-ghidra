@@ -122,6 +122,9 @@ ignore = ["F821", "E402"]
 # tests/acceptance holds standalone, rerunnable acceptance drivers against a
 # live supervisor; linear scripts and long JSON literals are accepted there.
 "tests/acceptance/**" = ["E501", "C901", "RUF059", "RUF100", "B007", "B905", "UP031", "F841"]
+# gen_llms_doc embeds bilingual prose (fullwidth punctuation) and long JSON
+# examples on purpose.
+"tools/gen_llms_doc.py" = ["E501", "RUF001", "RUF002", "RUF003"]
 
 
 [tool.ruff.lint.isort]
