@@ -1,7 +1,7 @@
 # PyGhidra MCP Makefile
 # Development and deployment commands for the PyGhidra MCP server
 
-.PHONY: help install install-dev run run-direct test test-integration test-integration-fast test-integration-gui test-unit lint format typecheck clean pre-commit-install check dev build
+.PHONY: help install install-dev run run-direct test test-integration test-integration-fast test-integration-gui test-unit lint format typecheck clean check dev build
 
 WORKER_CONFIG ?= workers.json
 
@@ -17,12 +17,11 @@ help:
 	@echo "  test               Run the full test suite (unit and integration)"
 	@echo "  test-unit          Run unit tests"
 	@echo "  test-integration   Run integration tests"
-	@echo "  test-integration-fast Run the lightweight integration smoke test used in pre-commit"
+	@echo "  test-integration-fast Run the lightweight integration smoke test"
 	@echo "  test-integration-gui Run GUI integration tests (requires Ghidra, GUI support)"
 	@echo "  lint               Check code style with ruff"
 	@echo "  format             Format code with ruff"
 	@echo "  typecheck          Run type checking with ruff"
-	@echo "  pre-commit-install Install pre-commit hooks"
 	@echo "  clean              Clean build artifacts and cache"
 	@echo "  dev-setup          Setup development environment"
 	@echo "  check              Run all quality checks"
@@ -79,14 +78,6 @@ typecheck:
 	@echo "Running type checking with ruff..."
 	uv run ruff check src/ --select=F
 
-# Pre-commit setup
-pre-commit-install:
-	@echo "Installing pre-commit hooks..."
-	uv run pre-commit install
-	@echo "✅ Pre-commit hooks installed"
-	@echo "   Hooks will run automatically on git commit"
-	@echo "   To run manually: uv run pre-commit run --all-files"
-
 # Maintenance
 clean:
 	@echo "Cleaning build artifacts..."
@@ -101,11 +92,10 @@ clean:
 	find . -type f -name "*.pyc" -delete
 
 # Development workflow
-dev-setup: install-dev pre-commit-install
+dev-setup: install-dev
 	@echo "Development environment setup complete!"
 	@echo "Run 'make run' to start the server"
 	@echo "Run 'make test' to run tests"
-	@echo "Pre-commit hooks are installed and will run on git commit"
 
 # Build and quality check
 check: lint typecheck test

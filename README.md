@@ -35,6 +35,18 @@ each other, and a scriptable REST API beside MCP with one registry serving both 
 Everything is validated against real Ghidra 12.1.4 on AArch64, ARM32, x86-64, and native Mach-O
 ARM64.
 
+### Requirements
+
+| Requirement | Detail |
+| --- | --- |
+| OS | macOS or Linux, ARM64 or x86-64 |
+| Python | 3.10 or newer, 3.12 in development |
+| Java | JDK 21 |
+| Ghidra | 12.1.4, with `GHIDRA_INSTALL_DIR` pointing at its folder |
+| uv | for `uv sync` (or plain pip with `pip install -e .`) |
+
+Release history: [CHANGELOG.md](CHANGELOG.md).
+
 ### How to use it (one picture)
 
 <p align="center">
@@ -189,6 +201,18 @@ fork，原项目提供二十个无头工具，用于让 MCP 客户端接入 Ghid
 工作进程的 supervisor、多团队互不干扰地分析同一二进制的 investigation 机制，以及与 MCP
 并列的可脚本化 REST API，同一份注册表服务两种协议。所有能力均在真实 Ghidra 12.1.4 上
 验证，覆盖 AArch64、ARM32、x86-64 以及原生 Mach-O ARM64。
+
+### 环境要求
+
+| 要求 | 说明 |
+| --- | --- |
+| 操作系统 | macOS 或 Linux，ARM64 或 x86-64 |
+| Python | 3.10 及以上，开发使用 3.12 |
+| Java | JDK 21 |
+| Ghidra | 12.1.4，`GHIDRA_INSTALL_DIR` 指向其安装目录 |
+| uv | 用于 `uv sync`（或用 pip 执行 `pip install -e .`） |
+
+发布历史见 [CHANGELOG.md](CHANGELOG.md)。
 
 ### 一图看懂怎么用
 
