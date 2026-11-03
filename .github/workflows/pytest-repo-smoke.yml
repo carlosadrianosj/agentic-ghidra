@@ -1,6 +1,9 @@
-# Fast macOS smoke coverage for repo changes.
+# Real Ghidra smoke coverage for repo changes.
+# Runs on Linux: 1x billing multiplier on private repos and the public
+# Ghidra zip ships Linux natives, so no decompiler build step. macOS keeps
+# local coverage through `make test-integration`.
 
-name: Pytest Local Repo macOS Smoke
+name: Pytest Repo Smoke
 
 on:
   push:
@@ -8,7 +11,7 @@ on:
     paths:
       - 'src/pyghidra_mcp/**'
       - 'tests/**'
-      - '.github/workflows/pytest-repo-macos-smoke.yml'
+      - '.github/workflows/pytest-repo-smoke.yml'
   pull_request:
     branches: [ "main" ]
     paths:
@@ -17,13 +20,13 @@ on:
       - 'pyproject.toml'
       - '.python-version'
       - 'uv.lock'
-      - '.github/workflows/pytest-repo-macos-smoke.yml'
+      - '.github/workflows/pytest-repo-smoke.yml'
   workflow_dispatch:
 
 jobs:
-  test-macos-smoke:
-    name: test-macos-smoke (${{ matrix.ghidra_version }}ghidra-${{ matrix.python_version }}python)
-    runs-on: macos-latest
+  test-smoke:
+    name: test-smoke (${{ matrix.ghidra_version }}ghidra-${{ matrix.python_version }}python)
+    runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
       fail-fast: false
@@ -145,24 +148,24 @@ jobs:
           GHIDRA_DIR="$(find "${GHIDRA_INSTALL_ROOT}" -maxdepth 1 -type d -name 'ghidra_*_PUBLIC*' | head -n1)"
         fi
 
-        xattr -dr com.apple.quarantine "${GHIDRA_DIR}" || true
-
-        # Recent public Ghidra archives omit macOS natives, so build the
-        # decompiler and Sleigh executables when they are not bundled.
-        MAC_ARCH="$(uname -m)"
-        case "${MAC_ARCH}" in
-          arm64) GHIDRA_OS="mac_arm_64" ;;
-          x86_64) GHIDRA_OS="mac_x86_64" ;;
-          *) echo "Unsupported macOS architecture: ${MAC_ARCH}" >&2; exit 1 ;;
-        esac
-        DECOMPILER_SRC="${GHIDRA_DIR}/Ghidra/Features/Decompiler/src/decompile/cpp"
-        DECOMPILER_BIN="${GHIDRA_DIR}/Ghidra/Features/Decompiler/os/${GHIDRA_OS}"
-        if [ ! -x "${DECOMPILER_BIN}/decompile" ] || [ ! -x "${DECOMPILER_BIN}/sleigh" ]; then
-          make -C "${DECOMPILER_SRC}" -j4 ghidra_opt ARCH_TYPE="-arch ${MAC_ARCH}"
-          make -C "${DECOMPILER_SRC}" -j4 sleigh_opt ARCH_TYPE="-arch ${MAC_ARCH}"
-          mkdir -p "${DECOMPILER_BIN}"
-          install -m 755 "${DECOMPILER_SRC}/ghidra_opt" "${DECOMPILER_BIN}/decompile"
-          install -m 755 "${DECOMPILER_SRC}/sleigh_opt" "${DECOMPILER_BIN}/sleigh"
+        if [ "$(uname)" = "Darwin" ]; then
+          xattr -dr com.apple.quarantine "${GHIDRA_DIR}" || true
+          # Recent public Ghidra archives omit macOS natives; build them when missing.
+          MAC_ARCH="$(uname -m)"
+          case "${MAC_ARCH}" in
+            arm64) GHIDRA_OS="mac_arm_64" ;;
+            x86_64) GHIDRA_OS="mac_x86_64" ;;
+            *) echo "Unsupported macOS architecture: ${MAC_ARCH}" >&2; exit 1 ;;
+          esac
+          DECOMPILER_SRC="${GHIDRA_DIR}/Ghidra/Features/Decompiler/src/decompile/cpp"
+          DECOMPILER_BIN="${GHIDRA_DIR}/Ghidra/Features/Decompiler/os/${GHIDRA_OS}"
+          if [ ! -x "${DECOMPILER_BIN}/decompile" ] || [ ! -x "${DECOMPILER_BIN}/sleigh" ]; then
+            make -C "${DECOMPILER_SRC}" -j4 ghidra_opt ARCH_TYPE="-arch ${MAC_ARCH}"
+            make -C "${DECOMPILER_SRC}" -j4 sleigh_opt ARCH_TYPE="-arch ${MAC_ARCH}"
+            mkdir -p "${DECOMPILER_BIN}"
+            install -m 755 "${DECOMPILER_SRC}/ghidra_opt" "${DECOMPILER_BIN}/decompile"
+            install -m 755 "${DECOMPILER_SRC}/sleigh_opt" "${DECOMPILER_BIN}/sleigh"
+          fi
         fi
 
         echo "GHIDRA_INSTALL_DIR=${GHIDRA_DIR}" >> "${GITHUB_ENV}"
@@ -172,7 +175,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e .[dev]
 
-    - name: Run macOS smoke tests
+    - name: Run smoke tests
       run: |
         mkdir -p junit
         python -m pytest \
@@ -184,12 +187,12 @@ jobs:
           tests/integration/test_stdio_client.py \
           tests/integration/test_streamable_client.py \
           --doctest-modules \
-          --junitxml=junit/macos-smoke-${{ matrix.ghidra_version }}ghidra-${{ matrix.python_version }}python.xml
+          --junitxml=junit/smoke-${{ matrix.ghidra_version }}ghidra-${{ matrix.python_version }}python.xml
 
-    - name: Upload macOS smoke test results
+    - name: Upload smoke test results
       if: ${{ always() }}
       uses: actions/upload-artifact@v4
       with:
-        name: macos-smoke-results-${{ matrix.ghidra_version }}ghidra-${{ matrix.python_version }}python
-        path: junit/macos-smoke-${{ matrix.ghidra_version }}ghidra-${{ matrix.python_version }}python.xml
+        name: smoke-results-${{ matrix.ghidra_version }}ghidra-${{ matrix.python_version }}python
+        path: junit/smoke-${{ matrix.ghidra_version }}ghidra-${{ matrix.python_version }}python.xml
         retention-days: 7
