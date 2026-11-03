@@ -27,8 +27,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-SUITE_ROOT = HERE.parent            # api-scripts-test
-REPO_ROOT = SUITE_ROOT.parent       # Ghidra-advanced-MCP
+SUITE_ROOT = HERE.parent            # tests/api_scripts
+REPO_ROOT = SUITE_ROOT.parent       # repo root
 sys.path.insert(0, str(SUITE_ROOT))
 
 from rest_client import RestClient
