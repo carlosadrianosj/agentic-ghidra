@@ -1,9 +1,29 @@
-# Ghidra-advanced-MCP
+<p align="center">
+  <img src="icon/agentic-ghidra-logo.png" alt="Agentic-Ghidra" width="400"/>
+</p>
 
-Fork of [pyghidra-mcp](https://github.com/clearbluejar/pyghidra-mcp) (v0.2.7) extended with a
-212-operation headless catalog, isolated local workers, team investigations, and a scriptable
-REST API — validated against real Ghidra 12.1.4 on AArch64, ARM32, x86-64, and native Mach-O
-ARM64.
+<h1 align="center">Agentic-Ghidra</h1>
+
+<p align="center"><em>Many agents, one Ghidra — a headless, multi-agent approach to binary reverse engineering.</em></p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
+  <img src="https://img.shields.io/badge/Python-100%25-3776AB?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey?logo=linux&logoColor=white" alt="Platform: macOS | Linux">
+  <img src="https://img.shields.io/badge/Ghidra-12.1.4-orange" alt="Ghidra 12.1.4">
+  <img src="https://img.shields.io/badge/arch-AArch64%20%7C%20ARM32%20%7C%20x86--64-success" alt="Arch: AArch64 | ARM32 | x86-64">
+  <img src="https://img.shields.io/badge/tools-239%20exposed-blueviolet" alt="Tools: 239 exposed">
+  <img src="https://img.shields.io/badge/REST-%2Fapi%2Fv1-teal" alt="REST API">
+  <img src="https://img.shields.io/badge/MCP-AI%20assisted-brightgreen" alt="MCP">
+</p>
+
+Agentic-Ghidra started as a fork of [pyghidra-mcp](https://github.com/clearbluejar/pyghidra-mcp)
+(v0.2.7) — twenty headless tools for pointing an MCP client at Ghidra. It has since grown into a
+full agentic reverse-engineering platform: a 212-operation catalog (decompilation, type
+reconstruction, patching, pcode, transactions), a supervisor that boots isolated JVM workers on
+demand, team investigations where multiple agents analyze the same binary without stepping on each
+other, and a scriptable REST API beside MCP — one registry, two protocols. Everything is validated
+against real Ghidra 12.1.4 on AArch64, ARM32, x86-64, and native Mach-O ARM64.
 
 ## What is included
 
