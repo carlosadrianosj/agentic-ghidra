@@ -5,7 +5,7 @@ analysis, transaction, memory and listing families against one real binary per
 run and writes per-op evidence with REST envelope latencies.
 
 Usage:
-    python api-scripts-test/ApiInfra/test_infra.py \
+    python tests/api_scripts/ApiInfra/test_infra.py \
         --base http://127.0.0.1:29950 --worker api_infra \
         --binary ../PoC-files/02-elf-native/audio.primary.vbox86_32.so \
         --label audio32 [--soak] [--stop-worker]

@@ -121,9 +121,9 @@ ignore = ["F821", "E402"]
 [tool.ruff.lint.per-file-ignores]
 # JPype Java-interface stubs must keep their camelCase method names.
 "tests/unit/test_advanced_runtime.py" = ["N802"]
-# api-scripts-test holds standalone, rerunnable acceptance drivers against a
+# tests/api_scripts holds standalone, rerunnable acceptance drivers against a
 # live supervisor; linear scripts and long JSON literals are accepted there.
-"api-scripts-test/**" = ["E501", "C901", "RUF059", "RUF100", "B007", "B905", "UP031", "F841"]
+"tests/api_scripts/**" = ["E501", "C901", "RUF059", "RUF100", "B007", "B905", "UP031", "F841"]
 
 
 [tool.ruff.lint.isort]
