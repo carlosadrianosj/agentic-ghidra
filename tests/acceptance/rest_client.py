@@ -1,4 +1,4 @@
-"""Shared REST client for the tests/api_scripts suites.
+"""Shared REST client for the tests/acceptance suites.
 
 Every script in this folder imports from here so the suite has exactly one
 HTTP code path. Usage:
