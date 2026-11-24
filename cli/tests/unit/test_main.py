@@ -1,6 +1,6 @@
 from click.testing import CliRunner
 
-from pyghidra_mcp_cli.main import cli
+from agenticghidra_mcp_cli.main import cli
 
 
 def test_top_level_help_lists_edit_groups():

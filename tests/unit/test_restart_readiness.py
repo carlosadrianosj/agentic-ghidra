@@ -2,7 +2,7 @@ import sys
 import types
 from unittest.mock import Mock
 
-from pyghidra_mcp.context import PyGhidraContext
+from agenticghidra_mcp.context import PyGhidraContext
 
 
 def _install_fake_program_modules(monkeypatch, *, is_analyzed: bool):

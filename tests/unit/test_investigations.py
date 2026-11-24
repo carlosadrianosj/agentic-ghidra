@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from pyghidra_mcp.advanced.investigations import InvestigationManager
+from agenticghidra_mcp.advanced.investigations import InvestigationManager
 
 
 class _StoppedWorker:
@@ -16,7 +16,7 @@ class _StoppedWorker:
             "state": "stopped",
             "port": self.config.port,
             "project_identity": str(self.config.project.gpr_path),
-            "artifact_directory": str(self.config.project.pyghidra_mcp_dir),
+            "artifact_directory": str(self.config.project.agenticghidra_mcp_dir),
         }
 
 

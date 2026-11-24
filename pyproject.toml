@@ -1,7 +1,7 @@
 [project]
-name = "pyghidra-mcp"
-version = "1.0.0"
-description = "Python Command-Line Ghidra MCP"
+name = "agenticghidra-mcp"
+version = "2.0.0"
+description = "Agentic binary reverse engineering MCP server and REST supervisor"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -76,12 +76,12 @@ dev = [
 ]
 
 [project.scripts]
-pyghidra-mcp = "pyghidra_mcp.server:main"
-agentic-ghidra = "pyghidra_mcp.supervisor:main"
+agenticghidra-mcp = "agenticghidra_mcp.server:main"
+agentic-ghidra = "agenticghidra_mcp.supervisor:main"
 
 [tool.hatch.build]
 include = [
-    "src/pyghidra_mcp",
+    "src/agenticghidra_mcp",
 ]
 
 [tool.setuptools.packages.find]
@@ -89,7 +89,7 @@ where = ["src"]
 
 [tool.hatch.build.targets.wheel]
 packages = [
-    "src/pyghidra_mcp",
+    "src/agenticghidra_mcp",
 ]
 
 [tool.ruff]
@@ -128,7 +128,7 @@ ignore = ["F821", "E402"]
 
 
 [tool.ruff.lint.isort]
-known-first-party = ["pyghidra_mcp"]
+known-first-party = ["agenticghidra_mcp"]
 known-third-party = ["ghidra", "ghidrecomp", "java", "jpype"]
 
 combine-as-imports = true

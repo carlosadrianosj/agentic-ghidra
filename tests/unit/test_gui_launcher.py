@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from pyghidra_mcp.gui_launcher import GuiPyGhidraMcpLauncher
+from agenticghidra_mcp.gui_launcher import GuiPyGhidraMcpLauncher
 
 
 class _FakeAssertError(Exception):
@@ -159,7 +159,7 @@ def test_macos_gui_event_loop_skips_native_loop_after_shutdown(monkeypatch, shut
 
 @pytest.mark.skipif(sys.platform != "win32", reason="console handlers are Windows-only")
 def test_console_ctrl_handler_round_trip():
-    from pyghidra_mcp.gui_launcher import (
+    from agenticghidra_mcp.gui_launcher import (
         install_console_ctrl_handler,
         remove_console_ctrl_handler,
     )

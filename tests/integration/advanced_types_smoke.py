@@ -14,7 +14,7 @@ import uuid
 def smoke_types(runtime, owner, session_id, scratch):
     from java.lang import Object
 
-    from pyghidra_mcp.advanced.registry import build_operations
+    from agenticghidra_mcp.advanced.registry import build_operations
 
     operations = build_operations()
     exercised = set()

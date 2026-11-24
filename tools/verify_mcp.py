@@ -38,7 +38,7 @@ async def verify(url, worker, fixture, output):
                     reference = json.loads(
                         (
                             Path(__file__).resolve().parents[1]
-                            / "src/pyghidra_mcp/advanced/reference_catalog.json"
+                            / "src/agenticghidra_mcp/advanced/reference_catalog.json"
                         ).read_text()
                     )
                     assert {item["name"] for item in reference["tools"]} <= tools

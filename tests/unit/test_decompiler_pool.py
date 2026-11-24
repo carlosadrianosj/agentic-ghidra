@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from pyghidra_mcp.decompiler_pool import DecompilerPool
+from agenticghidra_mcp.decompiler_pool import DecompilerPool
 
 
 def test_concurrent_acquire_never_overcreates_or_blocks_return():

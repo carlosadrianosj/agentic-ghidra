@@ -158,7 +158,7 @@ def _validate_reference(source: bytes | None, facts: dict) -> None:
 
 
 def _validated_catalog(facts: dict):
-    from pyghidra_mcp.advanced.registry import build_operations, reference_catalog
+    from agenticghidra_mcp.advanced.registry import build_operations, reference_catalog
 
     catalog = reference_catalog()
     if catalog["source_revision"] != facts["source_revision"]:
@@ -176,8 +176,8 @@ def _registered_tools(names: list[str], legacy_capabilities: dict) -> dict:
     from mcp.server.fastmcp import FastMCP
     from mcp.server.fastmcp.server import Settings
 
-    from pyghidra_mcp.advanced.legacy import register_legacy_tools
-    from pyghidra_mcp.advanced.registry import register_advanced_tools
+    from agenticghidra_mcp.advanced.legacy import register_legacy_tools
+    from agenticghidra_mcp.advanced.registry import register_advanced_tools
 
     Settings.model_rebuild()
     server = FastMCP("catalog-check")
@@ -196,7 +196,7 @@ def _registered_tools(names: list[str], legacy_capabilities: dict) -> dict:
 def _validate_advanced_tools(operations: dict, specs: dict, registered: dict) -> None:
     from jsonschema import Draft202012Validator
 
-    from pyghidra_mcp.advanced.registry import input_schema
+    from agenticghidra_mcp.advanced.registry import input_schema
 
     for name, definition in operations.items():
         if definition.kind not in expected_classification(name):
@@ -211,7 +211,7 @@ def _validate_advanced_tools(operations: dict, specs: dict, registered: dict) ->
 
 
 def _validate_legacy_tools(operations: dict, registered: dict) -> list:
-    from pyghidra_mcp.advanced.legacy import LEGACY_CAPABILITIES
+    from agenticghidra_mcp.advanced.legacy import LEGACY_CAPABILITIES
 
     legacy = [registered[name] for name in LEGACY_CAPABILITIES]
     if len(legacy) != 20 or {tool.name for tool in legacy} != set(LEGACY_CAPABILITIES):
@@ -225,8 +225,8 @@ def _validate_legacy_tools(operations: dict, registered: dict) -> list:
 
 
 def _write_matrix(path: Path | None, facts: dict, evidence_path: Path | None) -> None:
-    from pyghidra_mcp.advanced.legacy import LEGACY_CAPABILITIES
-    from pyghidra_mcp.advanced.registry import equivalence_matrix
+    from agenticghidra_mcp.advanced.legacy import LEGACY_CAPABILITIES
+    from agenticghidra_mcp.advanced.registry import equivalence_matrix
 
     matrix = equivalence_matrix(evidence_path=evidence_path)
     if path is None:
@@ -251,7 +251,7 @@ def main() -> int:
     _validate_reference(_reference_source(args, facts), facts)
     specs, operations = _validated_catalog(facts)
 
-    from pyghidra_mcp.advanced.legacy import LEGACY_CAPABILITIES
+    from agenticghidra_mcp.advanced.legacy import LEGACY_CAPABILITIES
 
     registered = _registered_tools(facts["names"], LEGACY_CAPABILITIES)
     _validate_advanced_tools(operations, specs, registered)

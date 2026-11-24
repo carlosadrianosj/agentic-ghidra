@@ -9,8 +9,8 @@ import pytest
 from mcp.client.session import ClientSession
 from mcp.client.sse import sse_client
 
-from pyghidra_mcp.context import PyGhidraContext
-from pyghidra_mcp.models import DecompiledFunction
+from agenticghidra_mcp.context import PyGhidraContext
+from agenticghidra_mcp.models import DecompiledFunction
 
 
 def _find_free_port() -> int:
@@ -37,7 +37,7 @@ def sse_server(test_binary, ghidra_env, sse_project_args, sse_base_url):
         [
             "python",
             "-m",
-            "pyghidra_mcp",
+            "agenticghidra_mcp",
             *sse_project_args,
             "--no-threaded",
             "--wait-for-analysis",

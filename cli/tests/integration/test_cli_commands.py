@@ -1,4 +1,4 @@
-"""Integration tests for pyghidra-mcp CLI commands."""
+"""Integration tests for agenticghidra-mcp CLI commands."""
 
 import asyncio
 import os
@@ -39,7 +39,7 @@ def ghidra_env():
 @pytest.fixture(scope="module")
 def test_dir():
     """Create a unique temp directory for this test module."""
-    test_dir = tempfile.mkdtemp(prefix="pyghidra_cli_test_")
+    test_dir = tempfile.mkdtemp(prefix="agenticghidra_cli_test_")
     yield test_dir
     shutil.rmtree(test_dir, ignore_errors=True)
 
@@ -88,13 +88,13 @@ int main() {
 
 @pytest.fixture(scope="module")
 def streamable_server(test_binary, test_dir, ghidra_env, server_port):
-    """Fixture to start the pyghidra-mcp server in a separate process with isolated project."""
+    """Fixture to start the agenticghidra-mcp server in a separate process with isolated project."""
     project_dir = os.path.join(test_dir, "project.gpr")
     base_url = f"http://127.0.0.1:{server_port}"
 
     proc = subprocess.Popen(
         [
-            "pyghidra-mcp",
+            "agenticghidra-mcp",
             "--transport",
             "streamable-http",
             "--host",
@@ -113,7 +113,7 @@ def streamable_server(test_binary, test_dir, ghidra_env, server_port):
     if proc.poll() is not None:
         out, err = proc.communicate(timeout=5)
         raise RuntimeError(
-            f"pyghidra-mcp exited early with code {proc.returncode}.\n"
+            f"agenticghidra-mcp exited early with code {proc.returncode}.\n"
             f"STDOUT:\n{out}\nSTDERR:\n{err}"
         )
 
@@ -130,12 +130,12 @@ def streamable_server(test_binary, test_dir, ghidra_env, server_port):
         raise RuntimeError("Server did not start in time")
 
     async def wait_for_analysis(timeout=240):
-        from pyghidra_mcp_cli.client import PyGhidraMcpClient
+        from agenticghidra_mcp_cli.client import AgenticGhidraMcpClient
 
         deadline = time.time() + timeout
         while time.time() < deadline:
             try:
-                async with PyGhidraMcpClient(host="127.0.0.1", port=server_port) as client:
+                async with AgenticGhidraMcpClient(host="127.0.0.1", port=server_port) as client:
                     result = await client.list_project_binaries()
                     programs = result.get("programs", [])
                     if programs and all(
@@ -168,10 +168,10 @@ def streamable_server(test_binary, test_dir, ghidra_env, server_port):
 
 @pytest.fixture
 def client(server_port):
-    """Create a PyGhidraMcpClient for testing."""
-    from pyghidra_mcp_cli.client import PyGhidraMcpClient
+    """Create a AgenticGhidraMcpClient for testing."""
+    from agenticghidra_mcp_cli.client import AgenticGhidraMcpClient
 
-    return PyGhidraMcpClient(host="127.0.0.1", port=server_port)
+    return AgenticGhidraMcpClient(host="127.0.0.1", port=server_port)
 
 
 def run_cli(server_port: int, *args: str) -> subprocess.CompletedProcess[str]:
@@ -180,7 +180,7 @@ def run_cli(server_port: int, *args: str) -> subprocess.CompletedProcess[str]:
         [
             sys.executable,
             "-m",
-            "pyghidra_mcp_cli.main",
+            "agenticghidra_mcp_cli.main",
             "--port",
             str(server_port),
             "--format",

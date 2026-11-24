@@ -4,9 +4,9 @@ from unittest.mock import Mock, call
 
 import pytest
 
-import pyghidra_mcp.gui_context as gui_context_module
-from pyghidra_mcp.context import ProgramInfo
-from pyghidra_mcp.gui_context import GuiPyGhidraContext
+import agenticghidra_mcp.gui_context as gui_context_module
+from agenticghidra_mcp.context import ProgramInfo
+from agenticghidra_mcp.gui_context import GuiPyGhidraContext
 
 
 def test_unique_short_name_match_returns_unambiguous_program():
@@ -583,7 +583,7 @@ def test_prepare_domain_file_for_gui_open_marks_and_saves_closed_program(monkeyp
     domain_file.getDomainObject.assert_called_once_with("consumer", True, False, "dummy-monitor")
     context._mark_program_not_to_ask_to_analyze.assert_called_once_with(program)
     program.save.assert_called_once_with(
-        "pyghidra-mcp: suppress GUI analysis prompt",
+        "agenticghidra-mcp: suppress GUI analysis prompt",
         "dummy-monitor",
     )
     program.release.assert_not_called()

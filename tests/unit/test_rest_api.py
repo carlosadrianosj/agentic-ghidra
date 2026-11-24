@@ -9,8 +9,8 @@ from mcp import types
 from starlette.applications import Starlette
 from starlette.testclient import TestClient
 
-from pyghidra_mcp.rest_api import create_api_routes
-from pyghidra_mcp.supervisor import _dispatch, _management_tools, _result as wrap_result
+from agenticghidra_mcp.rest_api import create_api_routes
+from agenticghidra_mcp.supervisor import _dispatch, _management_tools, _result as wrap_result
 
 SECRET_DIGEST = hashlib.sha256(b"rest-secret").hexdigest()
 
@@ -203,7 +203,7 @@ def test_pipeline_filters_unknown_keys_and_applies_map():
     assert runtime.calls[3][1]["session_id"] == "return 42;"
 
 def test_message_classification_vocabulary():
-    from pyghidra_mcp.rest_api import _classify
+    from agenticghidra_mcp.rest_api import _classify
 
     assert _classify("limit must be between 1 and 1000") == 400
     assert _classify("Address or unique symbol not found: zzz") == 400

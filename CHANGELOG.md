@@ -3,7 +3,16 @@
 All notable changes to Agentic-Ghidra, newest first. The project started as a fork of
 pyghidra-mcp v0.2.7; every entry below is relative to that baseline. 中文版本在下方。
 
-## Unreleased
+## 2.0.0 (2026-11-24)
+
+### Changed
+
+- Renamed the Python package from `pyghidra_mcp` to `agenticghidra_mcp`, the CLI
+  package from `pyghidra_mcp_cli` to `agenticghidra_mcp_cli`, and the distribution
+  from `pyghidra-mcp` to `agenticghidra-mcp`. The entry point `pyghidra-mcp` is now
+  `agenticghidra-mcp` and the environment variables moved from `PYGHIDRA_MCP_*` to
+  `AGENTICGHIDRA_MCP_*`. Naming and bug fixes across the code base to ease our
+  development. Mentions of the upstream fork history keep the original names.
 
 ### Added
 
@@ -12,8 +21,7 @@ pyghidra-mcp v0.2.7; every entry below is relative to that baseline. 中文版�
 
 ### Removed
 
-- GitHub Actions on main: `pytest-repo-smoke.yml`, `release.yml` and the stray
-  `devcontainer.json` under `.github/workflows/`
+- `pytest-repo-smoke.yml` and the stray `devcontainer.json` under `.github/workflows/`
 
 ## 1.0.0 (2026-11-03)
 
@@ -53,7 +61,15 @@ First standalone release.
 
 所有重要变更，最新在前。项目起源于 pyghidra-mcp v0.2.7 的 fork，以下所有条目均相对该基线。
 
-### 未发布
+### 2.0.0（2026-11-24）
+
+#### 变更
+
+- Python 包由 `pyghidra_mcp` 更名为 `agenticghidra_mcp`，CLI 包由 `pyghidra_mcp_cli`
+  更名为 `agenticghidra_mcp_cli`，发行名由 `pyghidra-mcp` 更名为 `agenticghidra-mcp`；
+  入口命令 `pyghidra-mcp` 改为 `agenticghidra-mcp`，环境变量由 `PYGHIDRA_MCP_*`
+  迁移为 `AGENTICGHIDRA_MCP_*`。本次包含命名与缺陷修复，便于我们的开发。
+  上游 fork 历史表述保留原名。
 
 #### 新增
 
@@ -62,8 +78,7 @@ First standalone release.
 
 #### 移除
 
-- main 上的 GitHub Actions：`pytest-repo-smoke.yml`、`release.yml` 以及
-  `.github/workflows/` 下多余的 `devcontainer.json`
+- `.github/workflows/` 下的 `pytest-repo-smoke.yml` 与多余的 `devcontainer.json`
 
 ### 1.0.0（2026-11-03）
 

@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from pyghidra_mcp import mcp_tools
-from pyghidra_mcp.models import DecompiledFunction
+from agenticghidra_mcp import mcp_tools
+from agenticghidra_mcp.models import DecompiledFunction
 
 
 @pytest.mark.asyncio

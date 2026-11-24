@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from pyghidra_mcp.supervisor_runtime import (
+from agenticghidra_mcp.supervisor_runtime import (
     SupervisorRuntime,
     WorkerConfig,
     load_config,
@@ -71,7 +71,7 @@ def test_resolves_paths_against_config_and_accepts_gpr_convention(tmp_path):
     worker = config.workers[0]
     assert worker.project.gpr_path == tmp_path / "projects/a/example.gpr"
     assert worker.project.project_name == "example"
-    assert worker.project.pyghidra_mcp_dir == tmp_path / "projects/a/example-pyghidra-mcp"
+    assert worker.project.agenticghidra_mcp_dir == tmp_path / "projects/a/example-agenticghidra-mcp"
     assert worker.input_paths == (binary,)
     assert config.log_directory == tmp_path / ".runtime/logs"
 
@@ -81,7 +81,7 @@ def test_rejects_symlinked_artifact_directory_shared_with_another_worker(tmp_pat
     second = tmp_path / "projects/b"
     first.mkdir(parents=True)
     second.mkdir()
-    (first / "analysis_a-pyghidra-mcp").symlink_to(second, target_is_directory=True)
+    (first / "analysis_a-agenticghidra-mcp").symlink_to(second, target_is_directory=True)
     with pytest.raises(ValueError, match="artifact directories"):
         load_config(write_config(tmp_path))
 
@@ -122,13 +122,13 @@ from pathlib import Path
 import uvicorn
 from mcp import types
 from mcp.server import Server
-from pyghidra_mcp.supervisor import create_http_app
+from agenticghidra_mcp.supervisor import create_http_app
 
 port = int(sys.argv[1])
 worker_id = sys.argv[2]
 if len(sys.argv) > 3 and sys.argv[3] == "ignore-interrupt":
     signal.signal(signal.SIGINT, signal.SIG_IGN)
-server = Server("pyghidra-mcp:" + os.environ["PYGHIDRA_MCP_WORKER_TOKEN"])
+server = Server("agenticghidra-mcp:" + os.environ["AGENTICGHIDRA_MCP_WORKER_TOKEN"])
 
 @server.list_tools()
 async def list_tools():
@@ -190,7 +190,7 @@ def dynamic_config(tmp_path, count=2, **settings):
 def probe_catalog(monkeypatch):
     from mcp import types
 
-    from pyghidra_mcp.advanced import registry
+    from agenticghidra_mcp.advanced import registry
     monkeypatch.setattr(registry, "static_tool_catalog", lambda: [
         types.Tool(name="probe", inputSchema={
             "type": "object", "properties": {"barrier": {"type": "string"}},
@@ -279,7 +279,7 @@ async def test_startup_refuses_endpoint_with_wrong_ownership_token(
 ):
     config = dynamic_config(tmp_path, count=1)
     wrong_worker = MCP_WORKER.replace(
-        'os.environ["PYGHIDRA_MCP_WORKER_TOKEN"]', '"not-the-owned-worker"'
+        'os.environ["AGENTICGHIDRA_MCP_WORKER_TOKEN"]', '"not-the-owned-worker"'
     )
     monkeypatch.setattr(
         WorkerConfig,
@@ -380,7 +380,7 @@ async def test_background_worker_health_prevents_unsafe_stop_and_restart(
 ):
     from mcp import types
 
-    from pyghidra_mcp.advanced import registry
+    from agenticghidra_mcp.advanced import registry
 
     catalog = registry.static_tool_catalog()
     health_tool = types.Tool(

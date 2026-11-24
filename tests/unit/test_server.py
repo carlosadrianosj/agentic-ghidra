@@ -9,8 +9,8 @@ from unittest.mock import Mock
 import click.testing
 import pytest
 
-import pyghidra_mcp.server as server
-from pyghidra_mcp.indexing_mixin import IndexingMixin
+import agenticghidra_mcp.server as server
+from agenticghidra_mcp.indexing_mixin import IndexingMixin
 
 
 def _common_kwargs():
@@ -19,7 +19,7 @@ def _common_kwargs():
         "transport": "stdio",
         "project_name": "proj",
         "project_directory": "/tmp/proj",
-        "pyghidra_mcp_dir": Path("/tmp/proj-pyghidra-mcp"),
+        "agenticghidra_mcp_dir": Path("/tmp/proj-agenticghidra-mcp"),
         "force_analysis": False,
         "verbose_analysis": False,
         "no_symbols": False,

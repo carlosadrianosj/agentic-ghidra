@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from pyghidra_mcp.tools import DEFAULT_DECOMPILE_TIMEOUT_SECONDS, GhidraTools
+from agenticghidra_mcp.tools import DEFAULT_DECOMPILE_TIMEOUT_SECONDS, GhidraTools
 
 
 def _install_task_monitor(monkeypatch):
@@ -70,7 +70,7 @@ def test_decompile_does_not_enter_ghidra_after_pool_budget_expires(monkeypatch):
     pool = _RecordingPool(decompiler)
     tools = _make_tools(pool)
     function = Mock()
-    monkeypatch.setattr("pyghidra_mcp.tools.time.monotonic", Mock(side_effect=[100, 131]))
+    monkeypatch.setattr("agenticghidra_mcp.tools.time.monotonic", Mock(side_effect=[100, 131]))
 
     with pytest.raises(TimeoutError, match="Timed out waiting for a decompiler"):
         tools.decompile_function(function, timeout=30)

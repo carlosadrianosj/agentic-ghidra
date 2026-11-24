@@ -146,7 +146,7 @@ isolated per key.
 
 Catalog integrity: source names from the legacy tools are preserved as aliases and never counted
 as new capabilities. The equivalence matrix is pinned in
-`src/pyghidra_mcp/advanced/reference_catalog.json`, and `python tools/check_catalog.py` fails
+`src/agenticghidra_mcp/advanced/reference_catalog.json`, and `python tools/check_catalog.py` fails
 when `source_names - implemented_or_mapped != ∅`.
 
 Every operation is session bound, and mutations invalidate the decompiler and index caches, so
@@ -312,7 +312,7 @@ curl -s -XPOST localhost:29950/api/v1/tools/decomp.function \
 | 可信代码策略 | `ghidra.call`、`ghidra.eval`、`ghidra.script` 默认关闭，需显式开启 |
 
 目录完整性：遗留工具的源名称保留为别名，且绝不计入新能力。等价矩阵固定在
-`src/pyghidra_mcp/advanced/reference_catalog.json`；当
+`src/agenticghidra_mcp/advanced/reference_catalog.json`；当
 `source_names - implemented_or_mapped != ∅` 时，`python tools/check_catalog.py` 直接失败。
 
 每个操作都绑定会话；变更会使反编译器与索引缓存失效，下一次读取总能看到最新的程序状态。

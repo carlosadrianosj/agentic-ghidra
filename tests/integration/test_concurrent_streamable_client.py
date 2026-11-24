@@ -12,8 +12,8 @@ import pytest
 from mcp.client.session import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
-from pyghidra_mcp.context import PyGhidraContext
-from pyghidra_mcp.models import (
+from agenticghidra_mcp.context import PyGhidraContext
+from agenticghidra_mcp.models import (
     BytesReadResult,
     CallGraphResult,
     CodeSearchResults,
@@ -101,13 +101,13 @@ def streamable_base_url():
 
 @pytest.fixture(scope="module")
 def streamable_server(test_binary, ghidra_env, streamable_project_args, streamable_base_url):
-    """Fixture to start the pyghidra-mcp server in a separate process."""
+    """Fixture to start the agentic-ghidra server in a separate process."""
     port = int(streamable_base_url.rsplit(":", 1)[1])
     proc = subprocess.Popen(
         [
             "python",
             "-m",
-            "pyghidra_mcp",
+            "agenticghidra_mcp",
             *streamable_project_args,
             "--wait-for-analysis",
             "--transport",
@@ -246,7 +246,7 @@ async def invoke_mutation_tools(base_url: str, server_binary_path):
 @pytest.mark.asyncio
 async def test_concurrent_streamable_client_invocations(streamable_server):
     """
-    Tests concurrent client connections and tool invocations to the pyghidra-mcp server
+    Tests concurrent client connections and tool invocations to the agentic-ghidra server
     using streamable-http transport.
     """
     streamable_binary, streamable_base_url = streamable_server

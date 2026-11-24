@@ -1,7 +1,7 @@
 [project]
-name = "pyghidra-mcp-cli"
+name = "agenticghidra-mcp-cli"
 version = "0.2.7"
-description = "Command-line client for pyghidra-mcp server"
+description = "Command-line client for agenticghidra-mcp server"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [project.scripts]
-pyghidra-mcp-cli = "pyghidra_mcp_cli.main:cli"
+agenticghidra-mcp-cli = "agenticghidra_mcp_cli.main:cli"
 
 [project.optional-dependencies]
 dev = [
@@ -21,7 +21,7 @@ dev = [
     "ruff>=0.11.4",
     "pyright>=1.1.0",
     "tomli>=2.0.1",
-    "pyghidra-mcp>=0.2.7",
+    "agenticghidra-mcp>=2.0.0",
     "pre-commit>=3.0.0",
 ]
 
@@ -31,12 +31,12 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build]
 include = [
-    "src/pyghidra_mcp_cli",
+    "src/agenticghidra_mcp_cli",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = [
-    "src/pyghidra_mcp_cli",
+    "src/agenticghidra_mcp_cli",
 ]
 
 [tool.ruff]
@@ -44,7 +44,7 @@ target-version = "py310"
 line-length = 100
 
 [tool.uv.sources]
-pyghidra-mcp = { path = "..", editable = true }
+agenticghidra-mcp = { path = "..", editable = true }
 
 [tool.ruff.lint]
 select = [

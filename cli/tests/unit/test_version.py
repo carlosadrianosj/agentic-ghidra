@@ -1,8 +1,8 @@
 import tomli
 from click.testing import CliRunner
 
-from pyghidra_mcp_cli import __version__
-from pyghidra_mcp_cli.main import cli
+from agenticghidra_mcp_cli import __version__
+from agenticghidra_mcp_cli.main import cli
 
 
 def test_version_matches_pyproject():
@@ -15,4 +15,4 @@ def test_version_matches_pyproject():
 def test_cli_reports_package_version():
     result = CliRunner().invoke(cli, ["--version"])
     assert result.exit_code == 0
-    assert result.output.strip() == f"pyghidra-mcp-cli, version {__version__}"
+    assert result.output.strip() == f"agenticghidra-mcp-cli, version {__version__}"

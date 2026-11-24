@@ -8,8 +8,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from pyghidra_mcp.supervisor_runtime import SupervisorRuntime, WorkerConfig
-from pyghidra_mcp.telemetry import Metrics
+from agenticghidra_mcp.supervisor_runtime import SupervisorRuntime, WorkerConfig
+from agenticghidra_mcp.telemetry import Metrics
 
 from . import test_analysis_concurrency as analysis_fixtures, test_supervisor as supervisor_fixtures
 
@@ -350,7 +350,7 @@ def test_completed_index_submission_cannot_deadlock_its_completion_callback(cont
 def test_background_import_capacity_rejects_without_partial_enqueue(
     context_factory, monkeypatch, tmp_path
 ):
-    import pyghidra_mcp.context as context_module
+    import agenticghidra_mcp.context as context_module
 
     context = context_factory()
     context.max_pending_imports = 1

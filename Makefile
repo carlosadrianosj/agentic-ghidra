@@ -1,5 +1,5 @@
-# PyGhidra MCP Makefile
-# Development and deployment commands for the PyGhidra MCP server
+# AgenticGhidra MCP Makefile
+# Development and deployment commands for the AgenticGhidra MCP server
 
 .PHONY: help install install-dev run run-direct test test-integration test-integration-fast test-integration-gui test-unit lint format typecheck clean check dev build
 
@@ -7,7 +7,7 @@ WORKER_CONFIG ?= workers.json
 
 # Default target
 help:
-	@echo "PyGhidra MCP - A Ghidra integration for modern IDEs"
+	@echo "AgenticGhidra MCP - agentic binary reverse engineering on Ghidra"
 	@echo ""
 	@echo "Available commands:"
 	@echo "  install            Install project dependencies"
@@ -30,11 +30,11 @@ help:
 
 # Installation targets
 install:
-	@echo "Installing PyGhidra MCP dependencies..."
+	@echo "Installing AgenticGhidra MCP dependencies..."
 	uv sync
 
 install-dev:
-	@echo "Installing PyGhidra MCP with development dependencies..."
+	@echo "Installing AgenticGhidra MCP with development dependencies..."
 	uv sync --extra dev
 
 # Run isolated Ghidra workers behind one MCP endpoint
@@ -42,7 +42,7 @@ run:
 	uv run agentic-ghidra --config "$(WORKER_CONFIG)"
 
 run-direct:
-	uv run pyghidra-mcp --transport streamable-http
+	uv run agenticghidra-mcp --transport streamable-http
 
 # Testing targets
 test: test-unit test-integration

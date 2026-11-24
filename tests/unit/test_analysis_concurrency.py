@@ -7,8 +7,8 @@ from unittest.mock import Mock, call
 
 import pytest
 
-import pyghidra_mcp.context as context_module
-from pyghidra_mcp.context import PyGhidraContext
+import agenticghidra_mcp.context as context_module
+from agenticghidra_mcp.context import PyGhidraContext
 
 _TIMEOUT = 5
 

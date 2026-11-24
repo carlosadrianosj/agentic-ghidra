@@ -1,4 +1,4 @@
-from pyghidra_mcp.models import (
+from agenticghidra_mcp.models import (
     BytesReadResult,
     CodeSearchResult,
     CodeSearchResults,

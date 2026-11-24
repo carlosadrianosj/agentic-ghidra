@@ -13,8 +13,8 @@ import sys
 import types
 from unittest.mock import Mock
 
-from pyghidra_mcp.indexing_mixin import COLLECTION_COMPLETE_KEY, IndexingMixin
-from pyghidra_mcp.tools import DEFAULT_DECOMPILE_TIMEOUT_SECONDS
+from agenticghidra_mcp.indexing_mixin import COLLECTION_COMPLETE_KEY, IndexingMixin
+from agenticghidra_mcp.tools import DEFAULT_DECOMPILE_TIMEOUT_SECONDS
 
 
 class _Probe(IndexingMixin):
@@ -116,7 +116,7 @@ def test_code_indexing_uses_a_finite_decompile_timeout(monkeypatch):
     tools = Mock()
     tools.get_all_functions.return_value = [function]
     tools.decompile_function.return_value = decompiled
-    monkeypatch.setattr("pyghidra_mcp.indexing_mixin.GhidraTools", Mock(return_value=tools))
+    monkeypatch.setattr("agenticghidra_mcp.indexing_mixin.GhidraTools", Mock(return_value=tools))
 
     probe = IndexingMixin.__new__(IndexingMixin)
     probe._open_complete_collection = Mock(return_value=None)

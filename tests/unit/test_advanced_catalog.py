@@ -8,7 +8,7 @@ import anyio
 import pytest
 from mcp.server.fastmcp.exceptions import ToolError
 
-from pyghidra_mcp.advanced.registry import (
+from agenticghidra_mcp.advanced.registry import (
     MAX_INPUT_BYTES,
     MAX_OUTPUT_BYTES,
     build_operations,

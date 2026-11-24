@@ -8,8 +8,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from pyghidra_mcp.advanced.core import operation
-from pyghidra_mcp.advanced.runtime import AdvancedRuntime
+from agenticghidra_mcp.advanced.core import operation
+from agenticghidra_mcp.advanced.runtime import AdvancedRuntime
 
 
 class Monitor:
@@ -301,7 +301,7 @@ def test_program_operations_serialize_without_blocking_other_programs(runtime):
 def test_pending_transaction_rejects_lifecycle_changes_without_losing_batch(
     runtime, name, arguments
 ):
-    from pyghidra_mcp.advanced import lifecycle
+    from agenticghidra_mcp.advanced import lifecycle
 
     registered = session(runtime)
     runtime.begin(registered, "alice", "pending")

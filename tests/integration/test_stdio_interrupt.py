@@ -12,7 +12,7 @@ import pytest
 def test_stdio_ctrl_c_exits_without_additional_input(ghidra_env, tmp_path):
     """Clean shutdown must not wait for another line on an open MCP stdin."""
     proc = subprocess.Popen(
-        [sys.executable, "-m", "pyghidra_mcp", "--project-path", str(tmp_path)],
+        [sys.executable, "-m", "agenticghidra_mcp", "--project-path", str(tmp_path)],
         stdin=subprocess.PIPE,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,

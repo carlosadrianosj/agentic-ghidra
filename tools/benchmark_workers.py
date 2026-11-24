@@ -22,8 +22,8 @@ import tempfile
 import time
 from pathlib import Path
 
-from pyghidra_mcp.project_spec import ProjectSpec
-from pyghidra_mcp.supervisor_runtime import SupervisorConfig, SupervisorRuntime, WorkerConfig
+from agenticghidra_mcp.project_spec import ProjectSpec
+from agenticghidra_mcp.supervisor_runtime import SupervisorConfig, SupervisorRuntime, WorkerConfig
 
 
 def percentile(values, fraction):

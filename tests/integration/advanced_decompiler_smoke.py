@@ -8,7 +8,7 @@ passing operations. The driver intentionally commits database mutations.
 
 from __future__ import annotations
 
-from pyghidra_mcp.advanced import control_flow as graph, decompiler as decomp
+from agenticghidra_mcp.advanced import control_flow as graph, decompiler as decomp
 
 
 def _function_candidates(program):

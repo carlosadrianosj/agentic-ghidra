@@ -60,9 +60,9 @@ def smoke_module(name):
 
 
 def run_fixture(fixture, directory, evidence, selected=None):
-    from pyghidra_mcp.advanced.core import Call, address
-    from pyghidra_mcp.advanced.registry import build_operations, get_runtime
-    from pyghidra_mcp.context import PyGhidraContext
+    from agenticghidra_mcp.advanced.core import Call, address
+    from agenticghidra_mcp.advanced.registry import build_operations, get_runtime
+    from agenticghidra_mcp.context import PyGhidraContext
 
     context = PyGhidraContext(
         project_name="acceptance",
@@ -214,8 +214,8 @@ def main():
     pyghidra.start(False)
     from ghidra.framework import Application
 
-    from pyghidra_mcp.advanced.registry import reference_catalog
-    from pyghidra_mcp.telemetry import METRICS
+    from agenticghidra_mcp.advanced.registry import reference_catalog
+    from agenticghidra_mcp.telemetry import METRICS
 
     base = ROOT / "runtime/acceptance" / ("run-" + secrets.token_hex(6))
     evidence = {

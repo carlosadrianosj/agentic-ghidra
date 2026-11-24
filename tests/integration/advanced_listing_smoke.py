@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import base64
 
-from pyghidra_mcp.advanced import listing_memory
-from pyghidra_mcp.advanced.core import operation
+from agenticghidra_mcp.advanced import listing_memory
+from agenticghidra_mcp.advanced.core import operation
 
 
 def _scratch_base(program, scratch):

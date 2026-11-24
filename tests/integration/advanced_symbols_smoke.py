@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import uuid
 
-from pyghidra_mcp.advanced import symbols_references as operations
-from pyghidra_mcp.advanced.core import Call, address
+from agenticghidra_mcp.advanced import symbols_references as operations
+from agenticghidra_mcp.advanced.core import Call, address
 
 
 def _symbol_namespaces(invoke, expect_error, prefix, alpha, beta, target, root, other_root, child):

@@ -11,7 +11,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamable_http_client
 
-from pyghidra_mcp.context import PyGhidraContext
+from agenticghidra_mcp.context import PyGhidraContext
 
 
 def _find_free_port() -> int:
@@ -117,7 +117,7 @@ async def test_gui_background_indexing_eventually_enables_string_search(
         command="python",
         args=[
             "-m",
-            "pyghidra_mcp",
+            "agenticghidra_mcp",
             "--project-path",
             str(project_dir),
             "--project-name",
@@ -155,7 +155,7 @@ async def test_gui_background_indexing_eventually_enables_string_search(
             "python",
             "-u",
             "-m",
-            "pyghidra_mcp",
+            "agenticghidra_mcp",
             "--gui",
             "--transport",
             "streamable-http",

@@ -1,0 +1,93 @@
+# Auto release on main.
+#
+# Flow: work on develop, bump `version` in pyproject.toml and add the matching
+# CHANGELOG.md entry (English and Chinese), then merge to main. This workflow
+# tags v<version>, extracts the changelog sections for the release notes and
+# attaches the wheel and sdist. Pushes to main without a version bump are
+# ignored, so main can move freely between releases.
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version and changelog section
+        id: info
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import urllib.request
+
+          version = re.search(
+              r'^version = "(.+?)"', open("pyproject.toml").read(), re.M
+          ).group(1)
+          tag = f"v{version}"
+
+          req = urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/git/ref/tags/{tag}",
+              headers={"Authorization": f"Bearer {os.environ['GH_TOKEN']}"},
+          )
+          try:
+              urllib.request.urlopen(req)
+              tag_exists = True
+          except urllib.error.HTTPError as err:
+              if err.code != 404:
+                  raise
+              tag_exists = False
+
+          text = open("CHANGELOG.md").read()
+          en = re.search(
+              rf"^## {re.escape(version)}[^\n]*\n(.*?)(?=^## )",
+              text,
+              re.S | re.M,
+          )
+          if en is None:
+              raise SystemExit(f"CHANGELOG.md has no '## {version}' section")
+          body = en.group(1).strip()
+          zh = re.search(
+              rf"^### {re.escape(version)}[^\n]*\n(.*?)(?=^### |^## |\Z)",
+              text,
+              re.S | re.M,
+          )
+          if zh:
+              body += "\n\n---\n\n# 中文\n\n" + zh.group(1).strip()
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"version={version}\n")
+              out.write(f"tag={tag}\n")
+              out.write(f"skip={'true' if tag_exists else 'false'}\n")
+              out.write("body<<EOF\n" + body + "\nEOF\n")
+          PY
+
+      - name: Set up uv
+        if: steps.info.outputs.skip != 'true'
+        uses: astral-sh/setup-uv@v5
+
+      - name: Build distribution
+        if: steps.info.outputs.skip != 'true'
+        run: uv build
+
+      - name: Create release
+        if: steps.info.outputs.skip != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.info.outputs.tag }}
+          name: ${{ steps.info.outputs.tag }}
+          body: ${{ steps.info.outputs.body }}
+          files: |
+            dist/*.whl
+            dist/*.tar.gz

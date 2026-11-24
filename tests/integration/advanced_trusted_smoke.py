@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 
-from pyghidra_mcp.advanced import trusted
+from agenticghidra_mcp.advanced import trusted
 
 
 def smoke_trusted(runtime, owner, session_id, scratch):

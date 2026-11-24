@@ -1,5 +1,5 @@
-# PyGhidra MCP CLI Makefile
-# Development and deployment commands for the PyGhidra MCP CLI
+# AgenticGhidra MCP CLI Makefile
+# Development and deployment commands for the AgenticGhidra MCP CLI
 
 .PONY: help install install-dev test test-unit lint format typecheck clean pre-commit-install check dev build
 
@@ -7,7 +7,7 @@ export UV_CACHE_DIR := $(CURDIR)/.uv-cache
 
 # Default target
 help:
-	@echo "PyGhidra MCP CLI - Command-line client for pyghidra-mcp"
+	@echo "AgenticGhidra MCP CLI - Command-line client for agenticghidra-mcp"
 	@echo ""
 	@echo "Available commands:"
 	@echo "  install            Install project dependencies"
@@ -25,11 +25,11 @@ help:
 
 # Installation targets
 install:
-	@echo "Installing PyGhidra MCP CLI dependencies..."
+	@echo "Installing AgenticGhidra MCP CLI dependencies..."
 	uv sync
 
 install-dev:
-	@echo "Installing PyGhidra MCP CLI with development dependencies..."
+	@echo "Installing AgenticGhidra MCP CLI with development dependencies..."
 	uv sync --extra dev
 
 # Testing targets

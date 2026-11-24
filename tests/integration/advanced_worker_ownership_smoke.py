@@ -17,9 +17,9 @@ import uvicorn
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
-from pyghidra_mcp.project_spec import ProjectSpec
-from pyghidra_mcp.supervisor import create_http_app, create_server
-from pyghidra_mcp.supervisor_runtime import (
+from agenticghidra_mcp.project_spec import ProjectSpec
+from agenticghidra_mcp.supervisor import create_http_app, create_server
+from agenticghidra_mcp.supervisor_runtime import (
     SupervisorConfig,
     SupervisorRuntime,
     WorkerConfig,

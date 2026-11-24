@@ -1,8 +1,8 @@
 import tomli
 from click.testing import CliRunner
 
-from pyghidra_mcp import __version__
-from pyghidra_mcp.server import main, mcp
+from agenticghidra_mcp import __version__
+from agenticghidra_mcp.server import main, mcp
 
 
 def test_version_matches_pyproject():

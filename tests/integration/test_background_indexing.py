@@ -4,8 +4,8 @@ import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from pyghidra_mcp.context import PyGhidraContext
-from pyghidra_mcp.models import StringSearchResults
+from agenticghidra_mcp.context import PyGhidraContext
+from agenticghidra_mcp.models import StringSearchResults
 
 
 @pytest.fixture(scope="module")
@@ -14,7 +14,7 @@ def server_params_background_indexing(test_binary, ghidra_env, isolated_project_
         command="python",
         args=[
             "-m",
-            "pyghidra_mcp",
+            "agenticghidra_mcp",
             "--project-path",
             str(isolated_project_root / "background_indexing"),
             "--project-name",

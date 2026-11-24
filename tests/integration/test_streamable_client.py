@@ -9,8 +9,8 @@ import pytest
 from mcp.client.session import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
-from pyghidra_mcp.context import PyGhidraContext
-from pyghidra_mcp.models import DecompiledFunction
+from agenticghidra_mcp.context import PyGhidraContext
+from agenticghidra_mcp.models import DecompiledFunction
 
 
 def _find_free_port() -> int:
@@ -32,13 +32,13 @@ def streamable_base_url():
 
 @pytest.fixture(scope="module")
 def streamable_server(test_binary, ghidra_env, streamable_project_args, streamable_base_url):
-    """Fixture to start the pyghidra-mcp server in a separate process."""
+    """Fixture to start the agentic-ghidra server in a separate process."""
     port = int(streamable_base_url.rsplit(":", 1)[1])
     proc = subprocess.Popen(
         [
             "python",
             "-m",
-            "pyghidra_mcp",
+            "agenticghidra_mcp",
             *streamable_project_args,
             "--wait-for-analysis",
             "--transport",

@@ -30,7 +30,7 @@ def base_address():
 
 @pytest.fixture(scope="module")
 def server_process():
-    """Start pyghidra-mcp server for integration tests."""
+    """Start agenticghidra-mcp server for integration tests."""
     import tempfile
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".c", delete=False) as f:
@@ -50,7 +50,7 @@ int main() {
     subprocess.run(f"gcc -o {bin_file} {c_file}", shell=True, check=True)
 
     proc = subprocess.Popen(
-        ["pyghidra-mcp", "--transport", "stdio", bin_file],
+        ["agenticghidra-mcp", "--transport", "stdio", bin_file],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

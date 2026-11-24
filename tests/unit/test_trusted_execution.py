@@ -3,8 +3,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from pyghidra_mcp.advanced.core import Call
-from pyghidra_mcp.advanced.trusted import MAX_OUTPUT_CHARS, evaluate
+from agenticghidra_mcp.advanced.core import Call
+from agenticghidra_mcp.advanced.trusted import MAX_OUTPUT_CHARS, evaluate
 
 
 @pytest.fixture

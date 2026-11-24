@@ -1,6 +1,6 @@
 import pytest
 
-from pyghidra_mcp.tools import ghidra_transaction
+from agenticghidra_mcp.tools import ghidra_transaction
 
 
 class FakeProgram:

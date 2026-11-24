@@ -8,7 +8,7 @@ import time
 import zipfile
 from pathlib import Path
 
-from pyghidra_mcp.advanced import lifecycle
+from agenticghidra_mcp.advanced import lifecycle
 
 
 def _analysis_transactions(invoke, sid):

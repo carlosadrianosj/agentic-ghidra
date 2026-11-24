@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import uuid
 
-from pyghidra_mcp.advanced import functions as operations
-from pyghidra_mcp.advanced.core import Call, address, function, source_type
+from agenticghidra_mcp.advanced import functions as operations
+from agenticghidra_mcp.advanced.core import Call, address, function, source_type
 
 
 def _fixture_functions(program):

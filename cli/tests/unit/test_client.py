@@ -1,4 +1,4 @@
-"""Unit tests for the pyghidra-mcp client."""
+"""Unit tests for the agenticghidra-mcp client."""
 
 from unittest.mock import AsyncMock
 
@@ -7,16 +7,16 @@ import pytest
 
 def test_client_import():
     """Test that the client module can be imported."""
-    from pyghidra_mcp_cli.client import PyGhidraMcpClient
+    from agenticghidra_mcp_cli.client import AgenticGhidraMcpClient
 
-    assert PyGhidraMcpClient is not None
+    assert AgenticGhidraMcpClient is not None
 
 
 def test_client_custom_params():
     """Test that client can be instantiated with custom parameters."""
-    from pyghidra_mcp_cli.client import PyGhidraMcpClient
+    from agenticghidra_mcp_cli.client import AgenticGhidraMcpClient
 
-    client = PyGhidraMcpClient(host="localhost", port=9000)
+    client = AgenticGhidraMcpClient(host="localhost", port=9000)
     assert client.host == "localhost"
     assert client.port == 9000
 
@@ -24,7 +24,7 @@ def test_client_custom_params():
 # @pytest.mark.skip(reason="Requires running server - this is an integration test")
 def test_client_error_exception():
     """Test ClientError exception."""
-    from pyghidra_mcp_cli.client import ClientError
+    from agenticghidra_mcp_cli.client import ClientError
 
     with pytest.raises(ClientError):
         raise ClientError("Test error")
@@ -32,7 +32,7 @@ def test_client_error_exception():
 
 def test_binary_not_found_error_exception():
     """Test BinaryNotFoundError exception."""
-    from pyghidra_mcp_cli.client import BinaryNotFoundError
+    from agenticghidra_mcp_cli.client import BinaryNotFoundError
 
     with pytest.raises(BinaryNotFoundError):
         raise BinaryNotFoundError("Binary not found")
@@ -40,9 +40,9 @@ def test_binary_not_found_error_exception():
 
 def test_client_has_edit_methods():
     """Test that edit-tool client methods exist."""
-    from pyghidra_mcp_cli.client import PyGhidraMcpClient
+    from agenticghidra_mcp_cli.client import AgenticGhidraMcpClient
 
-    client = PyGhidraMcpClient()
+    client = AgenticGhidraMcpClient()
     assert callable(client.rename_function)
     assert callable(client.rename_variable)
     assert callable(client.set_variable_type)
@@ -52,9 +52,9 @@ def test_client_has_edit_methods():
 
 def test_client_has_gui_methods():
     """Test that GUI-tool client methods exist."""
-    from pyghidra_mcp_cli.client import PyGhidraMcpClient
+    from agenticghidra_mcp_cli.client import AgenticGhidraMcpClient
 
-    client = PyGhidraMcpClient()
+    client = AgenticGhidraMcpClient()
     assert callable(client.list_open_programs)
     assert callable(client.open_program_in_gui)
     assert callable(client.set_current_program)
@@ -72,9 +72,9 @@ class FakeMcpResult:
 @pytest.mark.asyncio
 async def test_gui_client_methods_call_expected_tools():
     """Test GUI client wrappers call the expected MCP tools."""
-    from pyghidra_mcp_cli.client import PyGhidraMcpClient
+    from agenticghidra_mcp_cli.client import AgenticGhidraMcpClient
 
-    client = PyGhidraMcpClient()
+    client = AgenticGhidraMcpClient()
     client._connected = True
     client._session = AsyncMock()
     client._session.call_tool.return_value = FakeMcpResult({"ok": True})

@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import uuid
 
-from pyghidra_mcp.advanced import annotations as operations
-from pyghidra_mcp.advanced.core import Call, address, function, read_bytes
+from agenticghidra_mcp.advanced import annotations as operations
+from agenticghidra_mcp.advanced.core import Call, address, function, read_bytes
 
 
 def _conditional_branch(call, fn, options):
