@@ -10,6 +10,11 @@ pyghidra-mcp v0.2.7; every entry below is relative to that baseline. 中文版�
 - `docs/README.md`: documentation index for AI agents; human documentation lives at
   https://www.agenticghidra.reverselabs.dev/
 
+### Removed
+
+- GitHub Actions on main: `pytest-repo-smoke.yml`, `release.yml` and the stray
+  `devcontainer.json` under `.github/workflows/`
+
 ## 1.0.0 (2026-11-03)
 
 First standalone release.
@@ -54,6 +59,11 @@ First standalone release.
 
 - `docs/README.md`：面向 AI 智能体的文档索引；面向人类的文档在
   https://www.agenticghidra.reverselabs.dev/
+
+#### 移除
+
+- main 上的 GitHub Actions：`pytest-repo-smoke.yml`、`release.yml` 以及
+  `.github/workflows/` 下多余的 `devcontainer.json`
 
 ### 1.0.0（2026-11-03）
 
