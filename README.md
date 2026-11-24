@@ -45,8 +45,10 @@ ARM64.
 | Ghidra | 12.1.4, with `GHIDRA_INSTALL_DIR` pointing at its folder |
 | uv | for `uv sync` (or plain pip with `pip install -e .`) |
 
-Release history: [CHANGELOG.md](CHANGELOG.md). Full LLM usage reference with every tool schema:
-[docs/llm.txt](docs/llm.txt) (中文: [docs/llm-zh.txt](docs/llm-zh.txt)).
+Release history: [CHANGELOG.md](CHANGELOG.md). Documentation under [docs/](docs/README.md) is
+written for AI agents: the full LLM usage reference with every tool schema lives in
+[docs/llm.txt](docs/llm.txt) (中文: [docs/llm-zh.txt](docs/llm-zh.txt)). Human documentation:
+<https://www.agenticghidra.reverselabs.dev/>.
 
 ### How to use it (one picture)
 
@@ -215,8 +217,9 @@ fork，原项目提供二十个无头工具，用于让 MCP 客户端接入 Ghid
 | Ghidra | 12.1.4，`GHIDRA_INSTALL_DIR` 指向其安装目录 |
 | uv | 用于 `uv sync`（或用 pip 执行 `pip install -e .`） |
 
-发布历史见 [CHANGELOG.md](CHANGELOG.md)。面向 LLM 的完整使用参考（含全部工具 schema）：
-[docs/llm.txt](docs/llm.txt)（中文版 [docs/llm-zh.txt](docs/llm-zh.txt)）。
+发布历史见 [CHANGELOG.md](CHANGELOG.md)。[docs/](docs/README.md) 下的文档面向 AI 智能体：
+面向 LLM 的完整使用参考（含全部工具 schema）见 [docs/llm.txt](docs/llm.txt)
+（中文版 [docs/llm-zh.txt](docs/llm-zh.txt)）。面向人类的文档：<https://www.agenticghidra.reverselabs.dev/>。
 
 ### 一图看懂怎么用
 

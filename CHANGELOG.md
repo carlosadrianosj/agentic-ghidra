@@ -3,6 +3,13 @@
 All notable changes to Agentic-Ghidra, newest first. The project started as a fork of
 pyghidra-mcp v0.2.7; every entry below is relative to that baseline. 中文版本在下方。
 
+## Unreleased
+
+### Added
+
+- `docs/README.md`: documentation index for AI agents; human documentation lives at
+  https://www.agenticghidra.reverselabs.dev/
+
 ## 1.0.0 (2026-11-03)
 
 First standalone release.
@@ -40,6 +47,13 @@ First standalone release.
 ## 中文版
 
 所有重要变更，最新在前。项目起源于 pyghidra-mcp v0.2.7 的 fork，以下所有条目均相对该基线。
+
+### 未发布
+
+#### 新增
+
+- `docs/README.md`：面向 AI 智能体的文档索引；面向人类的文档在
+  https://www.agenticghidra.reverselabs.dev/
 
 ### 1.0.0（2026-11-03）
 
